@@ -14,7 +14,7 @@ type ResumeState = {
   setResume: (resume: Resume) => void;
   patchResume: (patch: Partial<Resume>) => void;
   setTemplate: (template: TemplateKind) => void;
-  setSourceInput: (scenario: string, answers: IntakeAnswers) => void;
+  setSourceInput: (scenario: string, answers: IntakeAnswers | null) => void;
   newDraft: () => void;
 };
 

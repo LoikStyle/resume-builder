@@ -20,14 +20,8 @@ export default function HomePage() {
   function handleNext() {
     if (!scenario.trim()) return;
     setSubmitting(true);
-    setSourceInput(scenario.trim(), {
-      roleDirection: 'mixed',
-      sceneInterests: [],
-      courseProjects: [],
-      modelsTools: { 模型: [], 评测框架: [], 自动化工具: [], 标注方法: [] },
-      roleInProject: '',
-      highlights: [],
-    });
+    // V2: 首页只 set scenario，answers 在 IntakeForm 提交时再填
+    setSourceInput(scenario.trim(), null);
     router.push('/intake');
   }
 

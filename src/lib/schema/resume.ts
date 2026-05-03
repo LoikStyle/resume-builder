@@ -86,18 +86,20 @@ export type Education = z.infer<typeof EducationSchema>;
 
 export type TemplateKind = 'dense' | 'loose' | 'structured';
 
-/** 段 0 追问表单的回答结构 */
+/** 段 0 追问表单的回答结构（V2） */
+export type WorkYears = '0' | '<1' | '1-3' | '>3';
+
 export type IntakeAnswers = {
-  roleDirection: 'annotation' | 'eval' | 'mixed';
-  sceneInterests: string[];
+  /** 工作年限——影响管理权重和动词选择 */
+  workYears: WorkYears;
+  /** 行业大类（单选 1 个，来自 INDUSTRIES 列表） */
+  industryCategory: string;
+  /** 细分场景（AI 动态生成后多选 1-3 个） */
+  subScenarios: string[];
+  /** 做过的项目（课程项目类型多选） */
   courseProjects: string[];
+  /** 自定义补充：例如选了"小组评测路演"后填的具体场景 */
   pathwayScene?: string;
-  modelsTools: {
-    模型: string[];
-    评测框架: string[];
-    自动化工具: string[];
-    标注方法: string[];
-  };
-  roleInProject: string;
-  highlights: string[];
+  /** 用过的模型 / 工具（多选，限 3-5 个） */
+  modelsTools: string[];
 };

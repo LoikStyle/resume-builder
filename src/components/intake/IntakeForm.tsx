@@ -2,31 +2,32 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { trainerQuestions } from './questions';
+import {
+  WORK_YEARS_OPTIONS,
+  INDUSTRY_OPTIONS,
+  COURSE_PROJECT_OPTIONS,
+  MODEL_TOOL_OPTIONS,
+  MODEL_TOOL_MIN,
+  MODEL_TOOL_MAX,
+} from './questions';
 import { useResumeStore } from '@/store/resume-store';
-import type { IntakeAnswers } from '@/lib/schema/resume';
+import type { IntakeAnswers, WorkYears } from '@/lib/schema/resume';
 
 type FormState = {
-  // 基本信息（直接进 resume.basic，避免 [待补充]）
+  // 基本信息
   name: string;
   phone: string;
   email: string;
   school: string;
   major: string;
   graduation: string;
-
-  roleDirection: 'annotation' | 'eval' | 'mixed';
-  sceneInterests: string[];
+  // 段 0
+  workYears: WorkYears;
+  industryCategory: string;
+  subScenarios: string[];
   courseProjects: string[];
   pathwayScene: string;
-  modelsTools: {
-    模型: string[];
-    评测框架: string[];
-    自动化工具: string[];
-    标注方法: string[];
-  };
-  roleInProject: string;
-  highlights: string[];
+  modelsTools: string[];
 };
 
 const initialState: FormState = {
@@ -36,13 +37,12 @@ const initialState: FormState = {
   school: '',
   major: '',
   graduation: '',
-  roleDirection: 'mixed',
-  sceneInterests: [],
+  workYears: '0',
+  industryCategory: '',
+  subScenarios: [],
   courseProjects: [],
   pathwayScene: '',
-  modelsTools: { 模型: [], 评测框架: [], 自动化工具: [], 标注方法: [] },
-  roleInProject: '独立完成',
-  highlights: [''],
+  modelsTools: [],
 };
 
 export default function IntakeForm() {
@@ -55,69 +55,49 @@ export default function IntakeForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const toggleArray = (key: 'sceneInterests' | 'courseProjects', value: string) => {
+  const toggleArray = (
+    key: 'subScenarios' | 'courseProjects' | 'modelsTools',
+    value: string
+  ) => {
     setForm((f) => {
       const arr = f[key];
-      return { ...f, [key]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value] };
-    });
-  };
-  const toggleGroup = (group: keyof FormState['modelsTools'], value: string) => {
-    setForm((f) => {
-      const arr = f.modelsTools[group];
+      const has = arr.includes(value);
+      // modelsTools 限 MAX
+      if (key === 'modelsTools' && !has && arr.length >= MODEL_TOOL_MAX) return f;
+      // subScenarios 限 3 个
+      if (key === 'subScenarios' && !has && arr.length >= 3) return f;
       return {
         ...f,
-        modelsTools: {
-          ...f.modelsTools,
-          [group]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value],
-        },
+        [key]: has ? arr.filter((v) => v !== value) : [...arr, value],
       };
     });
   };
-
-  function setHighlight(idx: number, value: string) {
-    setForm((f) => {
-      const arr = [...f.highlights];
-      arr[idx] = value;
-      return { ...f, highlights: arr };
-    });
-  }
-  function addHighlight() {
-    setForm((f) => ({ ...f, highlights: [...f.highlights, ''] }));
-  }
-  function removeHighlight(idx: number) {
-    setForm((f) => ({
-      ...f,
-      highlights: f.highlights.filter((_, i) => i !== idx),
-    }));
-  }
 
   async function handleSubmit() {
     if (!form.name.trim() || !form.school.trim()) {
       setError('请至少填姓名和毕业院校');
       return;
     }
-    if (form.sceneInterests.length === 0) {
-      setError('至少选 1 个感兴趣的场景');
+    if (!form.industryCategory) {
+      setError('请选 1 个行业大类');
       return;
     }
     if (form.courseProjects.length === 0) {
       setError('至少勾选 1 个课程项目');
       return;
     }
-    const validHighlights = form.highlights.filter((h) => h.trim());
-    if (validHighlights.length === 0) {
-      setError('至少填 1 项量化亮点');
+    if (form.modelsTools.length < MODEL_TOOL_MIN) {
+      setError(`模型 / 工具至少选 ${MODEL_TOOL_MIN} 个`);
       return;
     }
 
     const answers: IntakeAnswers = {
-      roleDirection: form.roleDirection,
-      sceneInterests: form.sceneInterests,
+      workYears: form.workYears,
+      industryCategory: form.industryCategory,
+      subScenarios: form.subScenarios,
       courseProjects: form.courseProjects,
       pathwayScene: form.pathwayScene || undefined,
       modelsTools: form.modelsTools,
-      roleInProject: form.roleInProject,
-      highlights: validHighlights,
     };
 
     const basicInfo = {
@@ -147,12 +127,10 @@ export default function IntakeForm() {
       const json = (await resp.json()) as { resume?: unknown; error?: string };
       if (json.error) throw new Error(json.error);
       if (!json.resume) throw new Error('未返回 resume 字段');
-
       setResume(json.resume as never);
       router.push('/editor');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '未知错误';
-      setError(msg);
+      setError(e instanceof Error ? e.message : '未知错误');
       setSubmitting(false);
     }
   }
@@ -160,202 +138,182 @@ export default function IntakeForm() {
   return (
     <div className="w-full max-w-2xl mx-auto space-y-8 py-8 px-6">
       <header className="space-y-2">
-        <p className="text-sm text-blue-600 font-medium">先填基本信息，再答 6 题</p>
-        <h1 className="text-2xl font-bold">告诉我你的项目和亮点</h1>
+        <p className="text-sm text-blue-600 font-medium">先填基本信息，再答 4 题</p>
+        <h1 className="text-2xl font-bold">告诉我你的方向和项目</h1>
         <p className="text-sm text-slate-500">
-          每题 30 秒就能答完。完整填写能让生成质量翻倍。
+          填得越完整，AI 帮你写的简历就越像"你"。
         </p>
       </header>
 
-      {/* 基本信息（先填这个，避免初版简历都是 [待补充]） */}
+      {/* 基本信息 */}
       <section className="space-y-3 bg-blue-50/50 border border-blue-100 rounded-lg p-4">
         <h2 className="font-semibold text-base text-blue-900">基本信息</h2>
         <div className="grid grid-cols-2 gap-3">
-          <BasicField
-            label="姓名 *"
-            value={form.name}
-            onChange={(v) => setForm((f) => ({ ...f, name: v }))}
-            placeholder="张三"
-          />
-          <BasicField
-            label="毕业院校 *"
-            value={form.school}
-            onChange={(v) => setForm((f) => ({ ...f, school: v }))}
-            placeholder="某某大学"
-          />
-          <BasicField
-            label="手机号"
-            value={form.phone}
-            onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
-            placeholder="13800138000"
-          />
-          <BasicField
-            label="邮箱"
-            value={form.email}
-            onChange={(v) => setForm((f) => ({ ...f, email: v }))}
-            placeholder="zhangsan@example.com"
-          />
-          <BasicField
-            label="专业"
-            value={form.major}
-            onChange={(v) => setForm((f) => ({ ...f, major: v }))}
-            placeholder="计算机科学与技术"
-          />
-          <BasicField
-            label="毕业时间"
-            value={form.graduation}
-            onChange={(v) => setForm((f) => ({ ...f, graduation: v }))}
-            placeholder="2025.06"
-          />
+          <BasicField label="姓名 *" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} placeholder="张三" />
+          <BasicField label="毕业院校 *" value={form.school} onChange={(v) => setForm((f) => ({ ...f, school: v }))} placeholder="某某大学" />
+          <BasicField label="手机号" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} placeholder="13800138000" />
+          <BasicField label="邮箱" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="zhangsan@example.com" />
+          <BasicField label="专业" value={form.major} onChange={(v) => setForm((f) => ({ ...f, major: v }))} placeholder="计算机科学与技术" />
+          <BasicField label="毕业时间" value={form.graduation} onChange={(v) => setForm((f) => ({ ...f, graduation: v }))} placeholder="2025.06" />
+        </div>
+      </section>
+
+      {/* Q1 工作年限 */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-base">
+          <span className="text-blue-600 mr-2">1.</span>
+          工作年限
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {WORK_YEARS_OPTIONS.map((opt) => {
+            const selected = form.workYears === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, workYears: opt.value }))}
+                className={`text-sm px-3 py-3 rounded-lg border transition ${
+                  selected
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
         <p className="text-xs text-slate-500">
-          只有姓名和毕业院校必填，其它字段可以等会儿在编辑器里补。
+          影响项目动词风格（应届偏执行 → 资深偏统筹）。
         </p>
       </section>
 
-      {trainerQuestions.map((q, idx) => (
-        <section key={q.id} className="space-y-3">
-          <h2 className="font-semibold text-base">
-            <span className="text-blue-600 mr-2">{idx + 1}.</span>
-            {q.label}
-          </h2>
+      {/* Q2 行业大类（单选） */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-base">
+          <span className="text-blue-600 mr-2">2.</span>
+          行业场景大类（单选 1 个）
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {INDUSTRY_OPTIONS.map((cat) => {
+            const selected = form.industryCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    industryCategory: cat,
+                    // 切换大类时清空已选细分场景
+                    subScenarios: [],
+                  }))
+                }
+                className={`text-sm px-3 py-2 rounded-lg border transition ${
+                  selected
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-          {q.type === 'single' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {q.options.map((opt) => {
-                const v = typeof opt === 'string' ? opt : opt.value;
-                const label = typeof opt === 'string' ? opt : opt.label;
-                const selected =
-                  q.id === 'roleDirection'
-                    ? form.roleDirection === v
-                    : form.roleInProject === v;
+      {/* Q3 细分场景（Day 2 接入 AI 动态生成；Day 1 占位） */}
+      {form.industryCategory && (
+        <section className="space-y-3">
+          <h2 className="font-semibold text-base">
+            <span className="text-blue-600 mr-2">3.</span>
+            细分场景（多选 1-3 个）
+          </h2>
+          <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+            <p className="text-sm text-slate-500">
+              ⏳ AI 实时生成"{form.industryCategory}"下的细分场景
+              <br />
+              <span className="text-xs text-slate-400">（Day 2 接入，目前可跳过此步）</span>
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* Q4 课程项目（多选） */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-base">
+          <span className="text-blue-600 mr-2">4.</span>
+          做过的项目（多选）
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {COURSE_PROJECT_OPTIONS.map((proj) => {
+            const selected = form.courseProjects.includes(proj);
+            return (
+              <button
+                key={proj}
+                type="button"
+                onClick={() => toggleArray('courseProjects', proj)}
+                className={`text-sm px-3 py-2 rounded-lg border transition ${
+                  selected
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {proj}
+              </button>
+            );
+          })}
+        </div>
+        {form.courseProjects.includes('小组评测路演') && (
+          <input
+            type="text"
+            value={form.pathwayScene}
+            onChange={(e) => setForm((f) => ({ ...f, pathwayScene: e.target.value }))}
+            placeholder="补充：路演的具体场景（如教育题目评测 / 客服 Bad Case 分析）"
+            className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        )}
+      </section>
+
+      {/* Q5 模型 / 工具（多选 3-5 个） */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-base">
+          <span className="text-blue-600 mr-2">5.</span>
+          用过的模型 / 工具（限选 {MODEL_TOOL_MIN}-{MODEL_TOOL_MAX} 个）
+        </h2>
+        <div className="text-xs text-slate-500">
+          已选 {form.modelsTools.length} / {MODEL_TOOL_MAX}
+        </div>
+        {Object.entries(MODEL_TOOL_OPTIONS).map(([group, items]) => (
+          <div key={group} className="space-y-2">
+            <p className="text-xs text-slate-500">{group}</p>
+            <div className="flex flex-wrap gap-2">
+              {items.map((item) => {
+                const selected = form.modelsTools.includes(item);
+                const disabled =
+                  !selected && form.modelsTools.length >= MODEL_TOOL_MAX;
                 return (
                   <button
-                    key={v}
+                    key={item}
                     type="button"
-                    onClick={() => {
-                      if (q.id === 'roleDirection') {
-                        setForm((f) => ({ ...f, roleDirection: v as FormState['roleDirection'] }));
-                      } else {
-                        setForm((f) => ({ ...f, roleInProject: v }));
-                      }
-                    }}
-                    className={`text-sm text-left px-4 py-3 rounded-lg border transition ${
+                    disabled={disabled}
+                    onClick={() => toggleArray('modelsTools', item)}
+                    className={`text-xs px-2.5 py-1.5 rounded-md border transition ${
                       selected
                         ? 'bg-blue-50 border-blue-500 text-blue-700'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
+                        : disabled
+                          ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                          : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
                     }`}
                   >
-                    {label}
+                    {item}
                   </button>
                 );
               })}
             </div>
-          )}
-
-          {q.type === 'multi' && (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {q.options.map((opt) => {
-                  const selected = (form[q.id as 'sceneInterests' | 'courseProjects'] as string[]).includes(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() =>
-                        toggleArray(q.id as 'sceneInterests' | 'courseProjects', opt)
-                      }
-                      className={`text-sm px-3 py-2 rounded-lg border transition ${
-                        selected
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : 'bg-white border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-              {q.customField && form.courseProjects.includes('小组评测路演') && (
-                <input
-                  type="text"
-                  value={form.pathwayScene}
-                  onChange={(e) => setForm((f) => ({ ...f, pathwayScene: e.target.value }))}
-                  placeholder="补充说明：路演的具体场景（如：教育题目评测 / 客服 Bad Case 分析）"
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              )}
-            </>
-          )}
-
-          {q.type === 'multiGroups' &&
-            Object.entries(q.groups).map(([group, items]) => (
-              <div key={group} className="space-y-2">
-                <p className="text-xs text-slate-500">{group}</p>
-                <div className="flex flex-wrap gap-2">
-                  {items.map((item) => {
-                    const selected =
-                      form.modelsTools[group as keyof FormState['modelsTools']].includes(item);
-                    return (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() =>
-                          toggleGroup(group as keyof FormState['modelsTools'], item)
-                        }
-                        className={`text-xs px-2.5 py-1.5 rounded-md border transition ${
-                          selected
-                            ? 'bg-blue-50 border-blue-500 text-blue-700'
-                            : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-          {q.type === 'multiFillable' && (
-            <div className="space-y-2">
-              {form.highlights.map((h, i) => (
-                <div key={i} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={h}
-                    onChange={(e) => setHighlight(i, e.target.value)}
-                    placeholder={q.templates[i % q.templates.length]}
-                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {form.highlights.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeHighlight(i)}
-                      className="px-3 text-slate-400 hover:text-red-600"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addHighlight}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                + 再加一项
-              </button>
-              <div className="text-xs text-slate-400 space-y-1 pt-1">
-                <p>参考模板（可直接复制改）：</p>
-                {q.templates.map((t) => (
-                  <p key={t}>· {t}</p>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      ))}
+          </div>
+        ))}
+      </section>
 
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
@@ -369,7 +327,9 @@ export default function IntakeForm() {
         disabled={submitting}
         className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 disabled:bg-slate-300"
       >
-        {submitting ? '生成中（约 3-4 分钟，调本地 Claude CLI）…' : '开始生成简历 →'}
+        {submitting
+          ? '生成中（约 3-4 分钟，调本地 Claude CLI）…'
+          : '开始生成简历 →'}
       </button>
     </div>
   );

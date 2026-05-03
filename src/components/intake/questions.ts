@@ -1,105 +1,50 @@
-/** 段 0 追问表单题目配置（按 AI 训练师/评测岗设计） */
+/**
+ * 段 0 追问表单题目配置（V2）
+ *
+ * V2 改动：
+ *   - 删了：方向偏好 / 在项目中的角色 / 量化亮点 / 标注方法
+ *   - 加了：工作年限 / 行业大类（单选）/ AI 动态细分场景
+ *   - 项目和工具的选项扩展
+ */
 
-export type Question =
-  | { id: string; label: string; type: 'single'; options: { value: string; label: string }[] }
-  | { id: string; label: string; type: 'multi'; options: string[]; customField?: string }
-  | { id: string; label: string; type: 'multiGroups'; groups: Record<string, string[]> }
-  | { id: string; label: string; type: 'multiFillable'; templates: string[] };
+import { INDUSTRIES } from '@/lib/industries';
 
-export const trainerQuestions: Question[] = [
-  {
-    id: 'roleDirection',
-    label: '想投哪类训练师岗？',
-    type: 'single',
-    options: [
-      { value: 'annotation', label: '偏标注 / 数据生产（SFT、RLHF、多模态）' },
-      { value: 'eval', label: '偏评测 / Bad Case 分析（评测集、报告）' },
-      { value: 'mixed', label: '综合（两者都做）' },
-    ],
-  },
-  {
-    id: 'sceneInterests',
-    label: '感兴趣的场景（多选，决定项目方向）',
-    type: 'multi',
-    options: [
-      '智能客服',
-      '电商商品',
-      '小红书等内容生成',
-      '教育题目',
-      '多模态(图/视频/音)',
-      'Agent / Tool',
-      'RAG 知识库',
-      '法律 / 医疗（专业向）',
-    ],
-  },
-  {
-    id: 'courseProjects',
-    label: '课程里完整做过的项目（勾选会进简历）',
-    type: 'multi',
-    options: [
-      'RAG 知识库 Q-R-R 三元评估',
-      'CoT 推理过程标注',
-      'Agent ReAct 轨迹标注',
-      '多模态文生图 / 视频评测',
-      '多模型横评（5+ 款对比）',
-      '用 Dify 合成 SFT 数据',
-      '小组评测路演',
-    ],
-    customField: 'pathwayScene',
-  },
-  {
-    id: 'modelsTools',
-    label: '用过的模型 / 工具（多选，进技能区）',
-    type: 'multiGroups',
-    groups: {
-      模型: [
-        'GPT-4',
-        'Claude',
-        '豆包',
-        'DeepSeek',
-        '千问',
-        '文心一言',
-        'Gemini',
-        'Sora',
-        '可灵',
-      ],
-      评测框架: ['OpenCompass', 'SuperCLUE'],
-      自动化工具: ['Dify', '火山引擎', 'Label Studio'],
-      标注方法: [
-        'ReAct',
-        'CoT',
-        'RLHF',
-        'SFT',
-        'DPO',
-        'Golden Set',
-        'AQL',
-        'Q+R+R',
-      ],
-    },
-  },
-  {
-    id: 'roleInProject',
-    label: '在项目中通常的角色',
-    type: 'single',
-    options: [
-      { value: '独立完成', label: '独立完成' },
-      { value: '主导规则设计', label: '主导规则设计' },
-      { value: '执行标注', label: '执行标注' },
-      { value: '负责质检', label: '负责质检' },
-      { value: '多角色轮换', label: '多角色轮换' },
-    ],
-  },
-  {
-    id: 'highlights',
-    label: '量化亮点（至少填 1 项；不问数据量）',
-    type: 'multiFillable',
-    templates: [
-      '设计 ___ 维度的评测体系',
-      '横评 ___ 款模型',
-      '覆盖 ___ 个垂直场景',
-      '发现 ___ 类高频 Bad Case',
-      '拦截率 / 通过率提升 ___%',
-      '撰写 ___ 份评测报告',
-    ],
-  },
+export type WorkYearsOption = { value: '0' | '<1' | '1-3' | '>3'; label: string };
+
+export const WORK_YEARS_OPTIONS: WorkYearsOption[] = [
+  { value: '0', label: '应届，无实习' },
+  { value: '<1', label: '1 年内（有实习）' },
+  { value: '1-3', label: '1-3 年' },
+  { value: '>3', label: '3 年以上' },
 ];
+
+export const INDUSTRY_OPTIONS = INDUSTRIES.map((c) => c.name);
+
+/** 课程项目（V2 扩展） */
+export const COURSE_PROJECT_OPTIONS = [
+  'RAG 知识库 Q-R-R 三元评估',
+  'CoT 推理过程标注',
+  'SFT 数据生产（单轮 / 多轮）',
+  'RLHF 偏好标注',
+  'Agent ReAct 轨迹标注',
+  '多模态 T2I 文生图评测',
+  '多模态 T2V 文生视频评测',
+  'VLM 视觉语言模型评测',
+  '多模型横评（5+ 款对比）',
+  'Dify SFT 数据自动合成',
+  '小组评测路演',
+] as const;
+
+/** 模型 / 工具选项（限选 3-5）。后期接 LMSYS 榜单 */
+export const MODEL_TOOL_OPTIONS = {
+  模型: [
+    'GPT-4', 'Claude', '豆包', 'DeepSeek', '千问',
+    '文心一言', 'Gemini', 'Sora', '可灵', '海螺',
+  ],
+  评测框架: ['OpenCompass', 'SuperCLUE'],
+  自动化工具: ['Dify', '火山引擎', 'Label Studio', 'Coze'],
+  标注方法: ['ReAct', 'CoT', 'RLHF', 'SFT', 'DPO', 'Golden Set', 'AQL', 'Q+R+R'],
+} as const;
+
+export const MODEL_TOOL_MIN = 3;
+export const MODEL_TOOL_MAX = 5;
