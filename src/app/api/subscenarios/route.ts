@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
     const prompt = buildPrompt(category, courseProjects);
 
     // 用 haiku 4.5（比 sonnet 快 5x，分类任务质量足够）
-    // 实测冷启动后 ~48s，留 120s 余量
+    // V3.2-fix2：prompt 变长（含项目类型边界规则），实测 70-90s，留 240s 余量
     const text = await callClaude(prompt, {
       model: 'claude-haiku-4-5-20251001',
-      timeoutMs: 120_000,
+      timeoutMs: 240_000,
     });
     const subscenarios = extractJson<Subscenario[]>(text);
 
@@ -90,25 +90,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ subscenarios });
   } catch (e) {
     console.error('[subscenarios] error:', e);
-    // fallback：失败时给一份兜底
+    // V3.2-fix2：失败时只返回错误信息，不返回 fallback——
+    // 之前 fallback 通用 6 项跟用户选的"电商"完全无关，反而误导
     return NextResponse.json(
       {
         error: e instanceof Error ? e.message : '生成失败',
-        subscenarios: FALLBACK_BY_CATEGORY('其他'),
+        retryable: true,
       },
       { status: 500 }
     );
   }
-}
-
-/** 兜底列表（API 失败时前端可用） */
-function FALLBACK_BY_CATEGORY(_cat: string): Subscenario[] {
-  return [
-    { name: '内容生成评测', description: '文案 / 短视频 / 图文质量横评' },
-    { name: 'Bad Case 拦截', description: '高频问题归因与拒答策略迭代' },
-    { name: 'SFT 数据生产', description: '单轮 / 多轮对话标注' },
-    { name: '多模型横评', description: '5+ 款主流模型对比报告' },
-    { name: '规则文档撰写', description: '标注规范 + 正反 case' },
-    { name: '评测维度设计', description: '4-5 维度评分体系搭建' },
-  ];
 }

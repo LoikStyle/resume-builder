@@ -43,7 +43,12 @@ export default function SubscenarioPicker({
     })
       .then(async (r) => {
         const j = (await r.json()) as { subscenarios?: Subscenario[]; error?: string };
-        if (j.subscenarios && Array.isArray(j.subscenarios)) {
+        // V3.2-fix2：HTTP 非 2xx 时优先显示 error，不静默用 subscenarios 数组
+        if (!r.ok) {
+          setError(j.error ?? `HTTP ${r.status}`);
+          return;
+        }
+        if (j.subscenarios && Array.isArray(j.subscenarios) && j.subscenarios.length > 0) {
           setItems(j.subscenarios);
         } else {
           setError(j.error ?? '未返回场景数据');
