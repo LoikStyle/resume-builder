@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   WORK_YEARS_OPTIONS,
@@ -54,7 +54,21 @@ export default function IntakeForm() {
 
   const [form, setForm] = useState<FormState>(initialState);
   const [submitting, setSubmitting] = useState(false);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // 提交后开始计时，让用户知道页面没卡死
+  useEffect(() => {
+    if (!submitting) {
+      setElapsedSec(0);
+      return;
+    }
+    const start = Date.now();
+    const t = setInterval(() => {
+      setElapsedSec(Math.round((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [submitting]);
 
   const toggleArray = (
     key: 'subScenarios' | 'courseProjects' | 'modelsTools',
@@ -326,10 +340,29 @@ export default function IntakeForm() {
         disabled={submitting}
         className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 disabled:bg-slate-300"
       >
-        {submitting
-          ? '生成中（约 3-4 分钟，调本地 Claude CLI）…'
-          : '开始生成简历 →'}
+        {submitting ? `生成中… 已用时 ${elapsedSec}s（通常 200-300s）` : '开始生成简历 →'}
       </button>
+
+      {submitting && (
+        <div className="text-xs text-slate-500 space-y-1 bg-slate-50 border border-slate-200 rounded p-3">
+          <p>📡 调用本地 Claude CLI 生成简历，请耐心等待…</p>
+          <p className="font-mono">
+            进度：
+            {elapsedSec < 30
+              ? '初始化检索...'
+              : elapsedSec < 80
+                ? 'Claude 正在思考...'
+                : elapsedSec < 200
+                  ? 'Claude 正在写项目段落...'
+                  : elapsedSec < 350
+                    ? 'Claude 正在润色 + 校验...'
+                    : '已超出预期时长，可能 Claude CLI 异常，请稍候...'}
+          </p>
+          <p className="text-[10px] text-slate-400">
+            页面没卡死，正常 200-300 秒。失败会显示错误信息让你重试。
+          </p>
+        </div>
+      )}
     </div>
   );
 }
