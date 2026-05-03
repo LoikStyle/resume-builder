@@ -74,9 +74,11 @@ export async function POST(req: NextRequest) {
 
     // 用 haiku 4.5（比 sonnet 快 5x，分类任务质量足够）
     // V3.2-fix2：prompt 变长（含项目类型边界规则），实测 70-90s，留 240s 余量
+    // V3.2-fix3：把客户端断连 signal 传到 spawn，避免切大类时旧 Claude 进程累积争抢资源
     const text = await callClaude(prompt, {
       model: 'claude-haiku-4-5-20251001',
       timeoutMs: 240_000,
+      signal: req.signal,
     });
     const subscenarios = extractJson<Subscenario[]>(text);
 

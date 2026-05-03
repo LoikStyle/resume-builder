@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process';
  */
 export async function callClaude(
   prompt: string,
-  opts: { model?: string; timeoutMs?: number } = {}
+  opts: { model?: string; timeoutMs?: number; signal?: AbortSignal } = {}
 ): Promise<string> {
   const model = opts.model ?? 'claude-sonnet-4-6';
   const timeoutMs = opts.timeoutMs ?? 360_000;  // 6 分钟，给 Sonnet 长 prompt 留余量
@@ -22,16 +22,34 @@ export async function callClaude(
 
     let stdout = '';
     let stderr = '';
+    let aborted = false;
     const timer = setTimeout(() => {
       proc.kill('SIGTERM');
       reject(new Error(`Claude CLI 超时 (${timeoutMs}ms)`));
     }, timeoutMs);
+
+    // 客户端断连时杀子进程，避免孤儿进程累积争抢资源
+    const onAbort = () => {
+      aborted = true;
+      clearTimeout(timer);
+      proc.kill('SIGTERM');
+      reject(new Error('Claude CLI 已被客户端 abort'));
+    };
+    if (opts.signal) {
+      if (opts.signal.aborted) {
+        onAbort();
+        return;
+      }
+      opts.signal.addEventListener('abort', onAbort, { once: true });
+    }
 
     proc.stdout.on('data', (d) => (stdout += d.toString()));
     proc.stderr.on('data', (d) => (stderr += d.toString()));
 
     proc.on('close', (code) => {
       clearTimeout(timer);
+      opts.signal?.removeEventListener('abort', onAbort);
+      if (aborted) return;
       if (code !== 0) {
         return reject(new Error(`Claude CLI exit ${code}: ${stderr}`));
       }
