@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export type Subscenario = { name: string; description: string };
 
@@ -20,15 +20,16 @@ export default function SubscenarioPicker({
   const [items, setItems] = useState<Subscenario[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0); // 重试触发器
   // V3.2：除大类外，项目集合变化也触发重新生成
+  // V3.2-fix3：删除 lastKeyRef（跟 Strict Mode 双调用冲突，导致首次挂载时第 2 次 effect 误跳过）
+  // 直接靠 useEffect 的依赖系统——fetchKey 变化才重跑，Strict Mode 双调用第 2 次会再发 fetch
   const projectsKey = courseProjects.slice().sort().join('|');
-  const lastKeyRef = useRef<string>('');
-  const fetchKey = `${category}::${projectsKey}`;
+  const fetchKey = `${category}::${projectsKey}::${retryNonce}`;
 
   useEffect(() => {
     if (!category) return;
-    if (lastKeyRef.current === fetchKey) return;
-    lastKeyRef.current = fetchKey;
+    if (!courseProjects.length) return;
 
     setLoading(true);
     setError(null);
@@ -43,7 +44,6 @@ export default function SubscenarioPicker({
     })
       .then(async (r) => {
         const j = (await r.json()) as { subscenarios?: Subscenario[]; error?: string };
-        // V3.2-fix2：HTTP 非 2xx 时优先显示 error，不静默用 subscenarios 数组
         if (!r.ok) {
           setError(j.error ?? `HTTP ${r.status}`);
           return;
@@ -60,7 +60,9 @@ export default function SubscenarioPicker({
       .finally(() => setLoading(false));
 
     return () => ctrl.abort();
-  }, [fetchKey, category, courseProjects]);
+    // 注意：fetchKey 已包含 category + projectsKey + retryNonce，依赖只列它一个就够
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchKey]);
 
   if (loading) {
     return (
@@ -81,8 +83,8 @@ export default function SubscenarioPicker({
         <button
           type="button"
           onClick={() => {
-            lastKeyRef.current = '';
             setError(null);
+            setRetryNonce((n) => n + 1); // 改 fetchKey 触发 useEffect
           }}
           className="mt-2 text-xs text-red-700 underline"
         >
