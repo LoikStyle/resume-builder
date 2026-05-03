@@ -114,9 +114,9 @@ async function mockRetrieval(input: {
       targetRole: 'AI 训练师 / 评测',
       mustHaveSkills: answers.courseProjects ?? [],
     },
-    // mock 阶段返回 top 6 条规则 + top 3 段 JD + 1 套结构
-    ruleFragments: rules.slice(0, 6),
-    jdBlocks: jds.slice(0, 3),
+    // mock 阶段返回 top 3 条规则 + top 2 段 JD + 1 套结构（V2 性能优化：少传比传多更准）
+    ruleFragments: rules.slice(0, 3),
+    jdBlocks: jds.slice(0, 2),
     structureSample,
   };
 }

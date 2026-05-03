@@ -11,7 +11,7 @@ export async function callClaude(
   opts: { model?: string; timeoutMs?: number } = {}
 ): Promise<string> {
   const model = opts.model ?? 'claude-sonnet-4-6';
-  const timeoutMs = opts.timeoutMs ?? 240_000;
+  const timeoutMs = opts.timeoutMs ?? 360_000;  // 6 分钟，给 Sonnet 长 prompt 留余量
 
   return new Promise((resolve, reject) => {
     const proc = spawn(

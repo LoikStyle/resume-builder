@@ -34,29 +34,27 @@ export async function POST(req: NextRequest) {
       structureSample: retrieval.structureSample,
     });
 
-    let lastError: string | null = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const text = await callClaude(prompt);
-        const raw = extractJson(text);
-        const result = ResumeSchema.safeParse(raw);
-        if (result.success) {
-          return NextResponse.json({ resume: result.data });
-        }
-        lastError = result.error.issues
-          .map((i) => `${i.path.join('.')}: ${i.message}`)
-          .join('\n');
-        console.warn(`[generate] attempt ${attempt + 1} schema 校验失败:\n`, lastError);
-      } catch (e) {
-        lastError = e instanceof Error ? e.message : String(e);
-        console.warn(`[generate] attempt ${attempt + 1} 异常:`, lastError);
+    // V2：取消失败重试——每次重试 + 几分钟，用户体验差。失败直接返回，让前端重新提交
+    try {
+      const text = await callClaude(prompt);
+      const raw = extractJson(text);
+      const result = ResumeSchema.safeParse(raw);
+      if (result.success) {
+        return NextResponse.json({ resume: result.data });
       }
+      const issues = result.error.issues
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('\n');
+      console.warn('[generate] schema 校验失败:\n', issues);
+      return NextResponse.json(
+        { error: `生成的 JSON 不符合 schema：\n${issues}`, raw },
+        { status: 500 }
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[generate] Claude 调用异常:', msg);
+      return NextResponse.json({ error: `Claude 调用失败：${msg}` }, { status: 500 });
     }
-
-    return NextResponse.json(
-      { error: `Claude 生成失败：${lastError}` },
-      { status: 500 }
-    );
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : '未知错误' },
