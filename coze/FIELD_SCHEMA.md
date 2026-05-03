@@ -61,7 +61,7 @@
 | `课程项目` | 多选 | `intakeAnswers.courseProjects` | **21 项**（V3.2 按笔记扩全）：SFT 单轮 / SFT 多轮 / CoT 推理 / RLHF 偏好 / DPO 偏好对 / RAG 评估 / Agent ReAct 轨迹 / Agent Tool 调用 / T2I 文生图评测 / T2V 文生视频评测 / VLM 视觉语言模型评测 / VQA 视觉问答标注 / 图像描述 Image Caption / TTS 文字转语音 / ASR 语音识别 / 数字人 配音评测 / 角色扮演数据 / 视频生成 短剧脚本 / 世界模型 具身智能 / 多模型横评 / Dify SFT 自动合成 / 小组评测路演 |
 | `路演场景` | 文本 | `intakeAnswers.pathwayScene` | 仅当 courseProjects 含"小组评测路演"时填 |
 | `行业大类` | 单选 | `intakeAnswers.industryCategory` | **22 项**（V3.2 扩展）：电商 / 小红书内容 / 短视频内容 / 影视化创作 / 内容创作 文案 / 营销 投放 / 教育 / 医疗 / 法律 / 金融 / 文旅 / 智能客服 / 角色扮演 虚拟陪伴 / 数字人 配音 / 多模态 / Agent Tool / RAG 知识库 / 具身智能 世界模型 / 编程 代码助手 / 翻译 多语言 / 游戏 互动剧本 / 其他垂直 |
-| `细分场景` | 文本（分号分隔）| `intakeAnswers.subScenarios.join('；')` | 1-3 个 AI 实时生成的场景（V3.2 不动） |
+| `细分场景` | **多选（开放值）** | `intakeAnswers.subScenarios` 数组直传 | 1-3 个 AI 实时生成的场景（基于"行业 ∩ 项目"交集）。每个学生看到的选项不同——飞书该列建"多选"字段并**勾"允许添加新选项"**，每次写入都自动新增 chip。<br>**示例**：选 T2I+VQA+电商 → 写入 `["电商商品图T2I模型评测", "商品图视觉问答VQA标注", "电商场景多模型视觉横评"]` 三个 chip |
 
 ### C 段：偏好（V3.1 板书新增 3 字段）
 

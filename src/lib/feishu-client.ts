@@ -40,7 +40,9 @@ export function toBitableFields(payload: {
     课程项目: i.courseProjects,
     路演场景: i.pathwayScene ?? '',
     行业大类: i.industryCategory,
-    细分场景: i.subScenarios.join('；'),
+    // V3.2-fix: 细分场景作为数组（飞书多选字段）—— 每个 AI 生成的场景独立成 chip
+    // 例：["电商商品图T2I评测", "商品主图自动描述生成", "商品图视觉问答VQA评测"]
+    细分场景: i.subScenarios,
     'AI 行业年限': i.aiIndustryYears,
     高亮字段: i.highlightFields,
     简历结构偏好: i.resumeStructure,
