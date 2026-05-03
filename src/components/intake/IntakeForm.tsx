@@ -308,6 +308,7 @@ export default function IntakeForm() {
           </h2>
           <SubscenarioPicker
             category={form.industryCategory}
+            courseProjects={form.courseProjects}
             selected={form.subScenarios}
             onToggle={(name) => toggleArray('subScenarios', name, 3)}
           />
