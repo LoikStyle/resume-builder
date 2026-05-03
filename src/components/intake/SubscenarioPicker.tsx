@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-export type Subscenario = { name: string; description: string };
+export type Subscenario = {
+  name: string;
+  description: string;
+  core_dimensions?: string[]; // V3.2-fix4：4 个评测维度，用于学生简历"N 维度评测体系"量化
+};
 
 type Props = {
   category: string;                    // 选中的行业大类
@@ -138,6 +142,22 @@ export default function SubscenarioPicker({
             >
               <div className="font-medium">{it.name}</div>
               <div className="text-xs text-slate-500 mt-0.5">{it.description}</div>
+              {it.core_dimensions && it.core_dimensions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {it.core_dimensions.map((dim) => (
+                    <span
+                      key={dim}
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        isSelected
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {dim}
+                    </span>
+                  ))}
+                </div>
+              )}
             </button>
           );
         })}
