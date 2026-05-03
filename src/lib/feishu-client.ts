@@ -19,14 +19,13 @@ export type FeishuPushResult = {
 export function toBitableFields(payload: {
   basicInfo: Record<string, string>;
   intakeAnswers: {
-    industryCategory: string;
-    subScenarios: string[];
     courseProjects: string[];
     pathwayScene?: string;
-    modelsTools: string[];
+    industryCategory: string;
+    subScenarios: string[];
     aiIndustryYears: string;
-    resumeStructure: string;
     highlightFields: string[];
+    resumeStructure: string;
   };
   scenario: string;
 }): Record<string, unknown> {
@@ -38,14 +37,13 @@ export function toBitableFields(payload: {
     毕业院校: b.school,
     专业: b.major,
     毕业时间: b.graduation,
-    行业大类: i.industryCategory,
-    细分场景: i.subScenarios.join('；'),
     课程项目: i.courseProjects,
     路演场景: i.pathwayScene ?? '',
-    模型工具: i.modelsTools,
+    行业大类: i.industryCategory,
+    细分场景: i.subScenarios.join('；'),
     'AI 行业年限': i.aiIndustryYears,
-    简历结构偏好: i.resumeStructure,
     高亮字段: i.highlightFields,
+    简历结构偏好: i.resumeStructure,
     学生原始描述: scenario,
   };
 }

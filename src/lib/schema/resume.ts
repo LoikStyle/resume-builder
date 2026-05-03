@@ -71,37 +71,40 @@ export type Education = z.infer<typeof EducationSchema>;
 
 export type TemplateKind = 'dense' | 'loose' | 'structured';
 
-/** 段 0 追问表单的回答结构（V3）
- *  V3 改动：
- *   - 删 workYears（训练师岗只看 AI 年限）
- *   - 加 aiIndustryYears（4 档：<6m/6m-1y/1-2y/>2y）
- *   - 加 resumeStructure（上下/左右/卡片）
- *   - 加 highlightFields（高亮定制）
- *   - 不加 personalStrengths（扣子工作流生成，学生在编辑器编辑）
+/** 段 0 追问表单的回答结构（V3.1）
+ *  V3.1 改动：
+ *   - 表单顺序调整：项目（前置）→ 大类 → AI 年限 → 高亮 → 结构
+ *   - 删除 modelsTools 字段（融入个人优势，扣子工作流生成时根据项目推断工具）
+ *   - 结构选项扩展到 6 个（对应 6 份可画模板风格）
+ *   - 高亮字段保留（前端字段维度选；未来扩到句子级）
  *  保留 WorkYears 类型导出，避免破坏 V2 demo 链路里的 prompt 引用
  */
 export type WorkYears = '0' | '<1' | '1-3' | '>3';
 export type AIIndustryYears = '<6m' | '6m-1y' | '1-2y' | '>2y';
-export type ResumeStructure = 'vertical' | 'horizontal' | 'card';
+export type ResumeStructure =
+  | 'minimal-bw'              // 黑白极简（上下）
+  | 'blue-fresh'              // 蓝色应届（上下）
+  | 'blue-marketing'          // 蓝白市场营销（上下）
+  | 'business-gray'           // 灰白商务（左右）
+  | 'business-internship'     // 灰白商务实习（左右）
+  | 'purple-teacher';         // 紫白教师（卡片）
 
 export type IntakeAnswers = {
+  /** 做过的项目（V3.1 前置） */
+  courseProjects: string[];
+  /** 自定义补充：例如选了"小组评测路演"后填的具体场景 */
+  pathwayScene?: string;
   /** 行业大类（单选 1 个，来自 INDUSTRIES 列表） */
   industryCategory: string;
   /** 细分场景（AI 动态生成后多选 1-3 个） */
   subScenarios: string[];
-  /** 做过的项目（课程项目类型多选）—— V3 前置 */
-  courseProjects: string[];
-  /** 自定义补充：例如选了"小组评测路演"后填的具体场景 */
-  pathwayScene?: string;
-  /** 用过的模型 / 工具（多选，限 3-5 个） */
-  modelsTools: string[];
-  /** AI 行业年限—— V3 后置，决定项目深度 */
+  /** AI 行业年限——决定项目深度 */
   aiIndustryYears: AIIndustryYears;
-  /** 简历结构偏好—— V3 板书新增 */
-  resumeStructure: ResumeStructure;
-  /** 高亮字段—— V3 板书新增，决定后端工作流着重突出哪些字段 */
+  /** 高亮字段——决定后端工作流着重突出哪些字段 */
   highlightFields: string[];
+  /** 简历结构偏好——6 选 1 */
+  resumeStructure: ResumeStructure;
 
-  /** V2 兼容：本地 demo 链路仍读 workYears 推断动词风格——前端表单不收集，从 aiIndustryYears 派生 */
+  /** V2 兼容：从 aiIndustryYears 派生，给 demo 链路读 */
   workYears?: WorkYears;
 };

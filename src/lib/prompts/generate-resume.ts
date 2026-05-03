@@ -31,7 +31,7 @@ ${yearsHint.fixedItem}
 - 行业大类: ${args.intakeAnswers.industryCategory}
 - 细分场景: ${args.intakeAnswers.subScenarios.join('、') || '（无）'}
 - 做过的项目: ${args.intakeAnswers.courseProjects.join('、')}
-- 模型/工具: ${args.intakeAnswers.modelsTools.join('、')}
+- 模型/工具: （V3.1 起前端不再单独收集，根据项目类型推断常用工具：RAG → Dify/向量库；Agent → ReAct 框架；多模态 → Sora/可灵 等）
 ${args.intakeAnswers.pathwayScene ? `- 路演场景: ${args.intakeAnswers.pathwayScene}` : ''}
 ${args.scenario ? `- 学生原话: ${args.scenario}` : ''}
 
@@ -80,7 +80,7 @@ C. **规则维度参考是"借势"不是"抄袭"**：
    - **禁止**把规则参考里的具体场景搬到学生项目（如规则参考里"小红书内容评测"，学生没做过就不能写）
 
 D. **selfEvaluation 不写学生身份外的能力**：
-   - 学生勾的 modelsTools 决定可写哪些模型/工具熟悉度
+   - 工具熟悉度根据学生勾选的项目类型合理推断（RAG 项目 → Dify 等）
    - 学生工作年限决定能力描述的边界（应届不写"主导团队"、"建立 SOP"）
 
 E. **不能确定的数字 / 描述用兜底表达**：
