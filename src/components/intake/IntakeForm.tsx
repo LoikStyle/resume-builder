@@ -10,6 +10,7 @@ import {
   MODEL_TOOL_MIN,
   MODEL_TOOL_MAX,
 } from './questions';
+import SubscenarioPicker from './SubscenarioPicker';
 import { useResumeStore } from '@/store/resume-store';
 import type { IntakeAnswers, WorkYears } from '@/lib/schema/resume';
 
@@ -222,20 +223,18 @@ export default function IntakeForm() {
         </div>
       </section>
 
-      {/* Q3 细分场景（Day 2 接入 AI 动态生成；Day 1 占位） */}
+      {/* Q3 细分场景（AI 动态生成 + 多选 1-3 个） */}
       {form.industryCategory && (
         <section className="space-y-3">
           <h2 className="font-semibold text-base">
             <span className="text-blue-600 mr-2">3.</span>
-            细分场景（多选 1-3 个）
+            细分场景（AI 生成，多选 1-3 个）
           </h2>
-          <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
-            <p className="text-sm text-slate-500">
-              ⏳ AI 实时生成"{form.industryCategory}"下的细分场景
-              <br />
-              <span className="text-xs text-slate-400">（Day 2 接入，目前可跳过此步）</span>
-            </p>
-          </div>
+          <SubscenarioPicker
+            category={form.industryCategory}
+            selected={form.subScenarios}
+            onToggle={(name) => toggleArray('subScenarios', name)}
+          />
         </section>
       )}
 
