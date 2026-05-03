@@ -20,9 +20,9 @@ export const WORK_YEARS_OPTIONS: WorkYearsOption[] = [
 
 export const INDUSTRY_OPTIONS = INDUSTRIES.map((c) => c.name);
 
-/** 课程项目（V2 扩展） */
+/** 课程项目（V2，修正：Q+R+R 是 Prompt 范式不是 RAG 评估，去掉错术语） */
 export const COURSE_PROJECT_OPTIONS = [
-  'RAG 知识库 Q-R-R 三元评估',
+  'RAG 数据质量评估',
   'CoT 推理过程标注',
   'SFT 数据生产（单轮 / 多轮）',
   'RLHF 偏好标注',
@@ -30,7 +30,7 @@ export const COURSE_PROJECT_OPTIONS = [
   '多模态 T2I 文生图评测',
   '多模态 T2V 文生视频评测',
   'VLM 视觉语言模型评测',
-  '多模型横评（5+ 款对比）',
+  '多模型横评',
   'Dify SFT 数据自动合成',
   '小组评测路演',
 ] as const;
