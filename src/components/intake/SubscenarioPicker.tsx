@@ -31,36 +31,42 @@ export default function SubscenarioPicker({
     if (!category) return;
     if (!courseProjects.length) return;
 
+    // V3.2-fix3：500ms 防抖——React Strict Mode 双调用 + 用户快速切换 = 多次 fetch 互相 abort，
+    // 最终全部失败。等 500ms 稳定后再发，Strict Mode 第一次的 cleanup 会取消 timer，第二次 effect 重新 schedule
+    const ctrl = new AbortController();
     setLoading(true);
     setError(null);
     setItems([]);
 
-    const ctrl = new AbortController();
-    fetch('/api/subscenarios', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, courseProjects }),
-      signal: ctrl.signal,
-    })
-      .then(async (r) => {
-        const j = (await r.json()) as { subscenarios?: Subscenario[]; error?: string };
-        if (!r.ok) {
-          setError(j.error ?? `HTTP ${r.status}`);
-          return;
-        }
-        if (j.subscenarios && Array.isArray(j.subscenarios) && j.subscenarios.length > 0) {
-          setItems(j.subscenarios);
-        } else {
-          setError(j.error ?? '未返回场景数据');
-        }
+    const debounce = setTimeout(() => {
+      fetch('/api/subscenarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, courseProjects }),
+        signal: ctrl.signal,
       })
-      .catch((e) => {
-        if (e.name !== 'AbortError') setError(e.message ?? '请求失败');
-      })
-      .finally(() => setLoading(false));
+        .then(async (r) => {
+          const j = (await r.json()) as { subscenarios?: Subscenario[]; error?: string };
+          if (!r.ok) {
+            setError(j.error ?? `HTTP ${r.status}`);
+            return;
+          }
+          if (j.subscenarios && Array.isArray(j.subscenarios) && j.subscenarios.length > 0) {
+            setItems(j.subscenarios);
+          } else {
+            setError(j.error ?? '未返回场景数据');
+          }
+        })
+        .catch((e) => {
+          if (e.name !== 'AbortError') setError(e.message ?? '请求失败');
+        })
+        .finally(() => setLoading(false));
+    }, 500);
 
-    return () => ctrl.abort();
-    // 注意：fetchKey 已包含 category + projectsKey + retryNonce，依赖只列它一个就够
+    return () => {
+      clearTimeout(debounce);
+      ctrl.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey]);
 
