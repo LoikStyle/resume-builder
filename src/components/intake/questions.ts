@@ -35,7 +35,9 @@ export const COURSE_PROJECT_OPTIONS = [
   '小组评测路演',
 ] as const;
 
-/** 模型 / 工具选项（限选 3-5）。后期接 LMSYS 榜单 */
+/** 模型 / 工具选项（限选 3-5）。后期接 LMSYS 榜单
+ *  V2 删除"标注方法"组——会议确认：标注方法跟着项目走，无需单独填写
+ */
 export const MODEL_TOOL_OPTIONS = {
   模型: [
     'GPT-4', 'Claude', '豆包', 'DeepSeek', '千问',
@@ -43,7 +45,6 @@ export const MODEL_TOOL_OPTIONS = {
   ],
   评测框架: ['OpenCompass', 'SuperCLUE'],
   自动化工具: ['Dify', '火山引擎', 'Label Studio', 'Coze'],
-  标注方法: ['ReAct', 'CoT', 'RLHF', 'SFT', 'DPO', 'Golden Set', 'AQL', 'Q+R+R'],
 } as const;
 
 export const MODEL_TOOL_MIN = 3;
