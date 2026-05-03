@@ -15,7 +15,7 @@ export function buildGeneratePrompt(args: {
 }): string {
   const schemaJson = SCHEMA_DESCRIPTION;
   const basic = args.basicInfo ?? {};
-  const yearsHint = WORK_YEARS_HINT[args.intakeAnswers.workYears];
+  const yearsHint = WORK_YEARS_HINT[args.intakeAnswers.workYears ?? '0'];
 
   return `你是 AI 训练师 / 评测岗简历定制专家。生成 Resume JSON。
 
