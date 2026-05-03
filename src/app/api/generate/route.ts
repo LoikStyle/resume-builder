@@ -27,10 +27,11 @@ export async function POST(req: NextRequest) {
     // 段 2：Claude 生成 + Zod 校验（最多重试 1 次）
     const prompt = buildGeneratePrompt({
       scenario,
-      intakeAnswers,
+      intakeAnswers: intakeAnswers as never,
       basicInfo,
-      resumeCards: retrieval.resume_cards,
-      jdSegments: retrieval.jd_segments,
+      ruleFragments: retrieval.ruleFragments,
+      jdBlocks: retrieval.jdBlocks,
+      structureSample: retrieval.structureSample,
     });
 
     let lastError: string | null = null;

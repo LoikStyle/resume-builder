@@ -1,9 +1,36 @@
 /**
  * 扣子（Coze）国内版工作流 HTTP 调用
- * 文档：https://www.coze.cn/open/docs
+ * V2 改动：检索结果改为 ruleFragments + jdBlocks + structureSample
  */
 
 const COZE_BASE = process.env.COZE_BASE_URL ?? 'https://api.coze.cn';
+
+export type RuleFragment = {
+  id: string;
+  rule_dimension: string;
+  task_type: string;
+  fragment: string;
+  source: string;
+  style: string;
+};
+
+export type JDBlock = {
+  id: string;
+  company: string;
+  role_title: string;
+  block: string;
+  is_trainer: boolean;
+};
+
+export type StructureSample = {
+  id: string;
+  layout: string;
+  title_style: string;
+  highlight_style: string;
+  section_order: string[];
+  visual_signature: string;
+  good_for: string;
+};
 
 export type RetrievalResult = {
   intent: {
@@ -12,8 +39,9 @@ export type RetrievalResult = {
     targetRole?: string;
     mustHaveSkills?: string[];
   };
-  resume_cards: Array<Record<string, unknown>>;
-  jd_segments: Array<Record<string, unknown>>;
+  ruleFragments: RuleFragment[];     // RAG 1：简历规则维度片段
+  jdBlocks: JDBlock[];                // RAG 2：JD 大段
+  structureSample: StructureSample;   // RAG 3：随机一套结构样本
 };
 
 export async function runRetrievalWorkflow(input: {
@@ -23,9 +51,8 @@ export async function runRetrievalWorkflow(input: {
   const pat = process.env.COZE_PAT;
   const workflowId = process.env.COZE_WORKFLOW_ID;
 
-  // POC fallback：扣子未配置时返回 mock 检索结果，让全流程能跑通
   if (!pat || !workflowId) {
-    console.warn('[coze-client] 未配置 COZE_PAT/COZE_WORKFLOW_ID，使用 mock 检索结果');
+    console.warn('[coze-client] 未配置 COZE_PAT/COZE_WORKFLOW_ID，使用 mock 检索');
     return mockRetrieval(input);
   }
 
@@ -56,31 +83,40 @@ export async function runRetrievalWorkflow(input: {
   return JSON.parse(wrap.data) as RetrievalResult;
 }
 
-/** POC 阶段没配扣子时的 mock 检索结果——直接读本地示例 JSON */
+/** POC mock：从本地 JSON 文件读取并随机采样 */
 async function mockRetrieval(input: {
   scenario: string;
   intakeAnswers: Record<string, unknown>;
 }): Promise<RetrievalResult> {
   const fs = await import('node:fs/promises');
   const path = await import('node:path');
-  const cardsPath = path.join(process.cwd(), 'data', 'resume_cards.json');
-  const jdsPath = path.join(process.cwd(), 'data', 'jd_segments.json');
 
-  const cards = JSON.parse(await fs.readFile(cardsPath, 'utf-8')) as Array<
-    Record<string, unknown>
-  >;
-  const jds = JSON.parse(await fs.readFile(jdsPath, 'utf-8')) as Array<
-    Record<string, unknown>
-  >;
+  const rulesPath = path.join(process.cwd(), 'data', 'resume_rules.json');
+  const jdsPath = path.join(process.cwd(), 'data', 'jd_blocks.json');
+  const structPath = path.join(process.cwd(), 'data', 'structure_samples.json');
+
+  const rules = JSON.parse(await fs.readFile(rulesPath, 'utf-8')) as RuleFragment[];
+  const jds = JSON.parse(await fs.readFile(jdsPath, 'utf-8')) as JDBlock[];
+  const structures = JSON.parse(await fs.readFile(structPath, 'utf-8')) as StructureSample[];
+
+  // RAG 3：每次随机选 1 套结构（关键随机性来源）
+  const structureSample = structures[Math.floor(Math.random() * structures.length)];
+
+  const answers = input.intakeAnswers as {
+    industryCategory?: string;
+    subScenarios?: string[];
+    courseProjects?: string[];
+  };
 
   return {
     intent: {
-      roleDirection: (input.intakeAnswers.roleDirection as string) ?? 'mixed',
-      subDirections: (input.intakeAnswers.sceneInterests as string[]) ?? [],
+      subDirections: answers.subScenarios ?? [],
       targetRole: 'AI 训练师 / 评测',
-      mustHaveSkills: [],
+      mustHaveSkills: answers.courseProjects ?? [],
     },
-    resume_cards: cards.slice(0, 8),
-    jd_segments: jds.slice(0, 5),
+    // mock 阶段返回 top 6 条规则 + top 3 段 JD + 1 套结构
+    ruleFragments: rules.slice(0, 6),
+    jdBlocks: jds.slice(0, 3),
+    structureSample,
   };
 }

@@ -1,16 +1,23 @@
-# AI 训练师简历生成器（POC）
+# AI 训练师简历生成器（V2）
 
-面向求职 AI 训练师 / 评测方向的学生：一句话场景 + 6 题追问 → AI 生成结构化简历 JSON → 在线编辑 + 一键 PDF 导出。
+面向求职 AI 训练师 / 评测方向的学生：一句话场景 + 5 题追问（含 AI 动态细分场景）→ AI 生成结构化简历 JSON → 在线编辑 + 一键 PDF 导出。
 
-## 三段链路
+> **版本说明**
+> - `main` 分支：V2，按会议决策重构（行业大类单选 + AI 动态细分 + 规则维度切法 + 结构样本库）
+> - `v1-frozen` tag：V1 历史版本（学生选 6 题 + 项目卡片切法）。需要回看用 `git checkout v1-frozen`。
+
+## 三段链路（V2）
 
 ```
-段 1【扣子检索】 学生输入 → 扣子工作流（意图+双路检索）→ 检索结果 JSON
+段 1【扣子检索】 学生 → 工作流：意图 + 规则维度召回 + JD 大段召回 + 随机结构样本
 段 2【Claude 生成】 Next.js 拼 prompt → 本地 claude --print → 严格 schema 简历 JSON
 段 3【编辑导出】  JSON 渲染到 1/3 密度模板 → 左表单右预览 → Puppeteer 一键 PDF
 ```
 
-POC 阶段段 1 未配扣子时 `coze-client` 自动用 `data/*.json` 作为 mock 检索结果。
+POC 阶段段 1 未配扣子时 `coze-client` 自动从 `data/*.json` mock：
+- `data/resume_rules.json` — 规则维度片段
+- `data/jd_blocks.json` — JD 大段
+- `data/structure_samples.json` — 结构样本（每次随机 1 套）
 
 ## 启动
 
@@ -58,22 +65,34 @@ data/
 coze/                         扣子工作流导出（你配完后扔这）
 ```
 
-## 真实数据切分
+## 真实数据切分（V2）
 
-**Day 1 关键步骤**——POC 用 mock 数据跑通了，要上真实质量必须做这步。
+V2 用 mock 数据已能跑通；上真实质量需要切分 4 类资料。
 
 ```bash
-# 1. 把 50 份真实简历放到 data/resumes-raw/（PDF 或 docx）
-# 2. 切分（每份 60-120 秒，50 份约 1-2 小时）
-npm run extract-cards
-# 3. 输出到 data/resume_cards.json，人工抽查 5-10 张
+# 1. 简历库（按"项目维度"切规则片段）— 方案 A
+cp 真实简历/*.pdf data/resumes-raw/
+npm run extract-rules-by-project    # 输出 data/resume_rules.json
 
-# 同理 JD：
-# 1. 把 100 份 JD 放到 data/jds-raw/
-npm run extract-jd
+# 2. 同一批简历切方案 B（字段级，更细）做对比
+npm run extract-rules-by-field      # 输出 data/resume_rules_by_field.json
+
+# 3. JD 库（大段切，保留完整上下文）
+cp 真实 JD/*.txt data/jds-raw/
+npm run extract-jd-blocks           # 输出 data/jd_blocks.json
+
+# 4. 结构样本库（视觉结构特征提取）
+cp 结构多样的样本/*.pdf data/structure-samples-raw/
+npm run extract-structure           # 输出 data/structure_samples.json
 ```
 
-切完后导入扣子知识库（参考 plan 文件 `coze/workflow.json` 的 metadata schema）。
+跑完后导入扣子知识库（3 个）。
+
+**V1 旧脚本保留**（v1-frozen tag 的切法，按"项目卡片"切）：
+```bash
+npm run extract-cards   # V1 切法，等价 v1-frozen 用法
+npm run extract-jd      # V1 切法
+```
 
 ## 扣子工作流配置
 

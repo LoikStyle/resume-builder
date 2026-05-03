@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "extract-cards": "tsx scripts/extract-cards.ts",
-    "extract-jd": "tsx scripts/extract-jd.ts"
+    "extract-jd": "tsx scripts/extract-jd.ts",
+    "extract-rules-by-project": "tsx scripts/extract-rules-by-project.ts",
+    "extract-rules-by-field": "tsx scripts/extract-rules-by-field.ts",
+    "extract-jd-blocks": "tsx scripts/extract-jd-blocks.ts",
+    "extract-structure": "tsx scripts/extract-structure.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
