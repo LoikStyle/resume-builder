@@ -28,26 +28,11 @@ export const ExperienceTypeEnum = z.enum([
   'competition',
 ]);
 
-export const TaskTypeEnum = z.enum([
-  '标注',
-  '评测',
-  '数据生产',
-  '规则设计',
-  '质检',
-  'Prompt工程',
-  '多模型对比',
-]);
-
-export const DataModalityEnum = z.enum([
-  '对话/SFT',
-  'CoT',
-  'RLHF',
-  'RAG',
-  'Agent',
-  '多模态-图',
-  '多模态-视频',
-  '多模态-音',
-]);
+// V2 改宽松：taskType / dataModality 是元数据 tag（仅前端 chip 显示用），
+// Claude 在规则维度参考下会自由发挥（"评测维度设计"、"Bad Case 归因"等），
+// 强 enum 反而频繁触发校验失败。
+export const TaskTypeEnum = z.string();
+export const DataModalityEnum = z.string();
 
 export const ExperienceSchema = z.object({
   id: z.string(),
