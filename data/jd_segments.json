@@ -1,0 +1,62 @@
+[
+  {
+    "id": "jd_001",
+    "company": "字节跳动",
+    "role_title": "AI 训练师（豆包大模型）",
+    "segment_type": "requirements",
+    "segment_text": "1. 熟悉大模型 SFT / RLHF 数据生产全流程，能独立承接需求并制定标注规范；2. 熟悉评测集搭建与多人盲标流程，对 Bad Case 有归因与归纳能力；3. 至少熟悉 GPT-4 / Claude / 豆包 / 千问中两款以上模型，能进行横向对比；4. 熟悉 Dify / 火山引擎 等自动化工具，能搭建 SFT 数据合成流水线。",
+    "sub_direction": ["对话/SFT", "RLHF"],
+    "must_have_skills": ["SFT", "RLHF", "Bad Case 分析", "多模型横评"],
+    "is_trainer": true
+  },
+  {
+    "id": "jd_002",
+    "company": "字节跳动",
+    "role_title": "AI 训练师（豆包大模型）",
+    "segment_type": "scenario",
+    "segment_text": "围绕智能客服 / 内容创作 / 教育辅导等垂直场景，进行模型评测与数据生产；针对 Bad Case 制定改进方案，迭代评测维度与标注规则。",
+    "sub_direction": ["智能客服", "内容创作", "教育"],
+    "must_have_skills": [],
+    "is_trainer": true
+  },
+  {
+    "id": "jd_003",
+    "company": "百度",
+    "role_title": "大模型评测工程师（文心）",
+    "segment_type": "requirements",
+    "segment_text": "1. 搭建评测集（200-500 条），制定多维度评分体系；2. 熟练使用 OpenCompass / SuperCLUE 等评测框架；3. 撰写置信度高的评测报告，配合算法团队定位短板；4. 熟悉 RAG / Agent / 多模态等子方向中至少一个。",
+    "sub_direction": ["评测", "RAG", "Agent"],
+    "must_have_skills": ["OpenCompass", "SuperCLUE", "评测报告", "多维度评分"],
+    "is_trainer": true
+  },
+  {
+    "id": "jd_004",
+    "company": "阿里巴巴",
+    "role_title": "AI 训练师（通义千问）",
+    "segment_type": "requirements",
+    "segment_text": "1. 熟悉 CoT / RAG / Agent 等数据类型的标注与评估流程；2. 能撰写无歧义、可执行的标注规则文档（含正反 case）；3. 熟悉 Golden Set / AQL 抽检等质检方法；4. 中文文字功底好，能输出高置信度的评测报告。",
+    "sub_direction": ["CoT", "RAG", "Agent"],
+    "must_have_skills": ["CoT 标注", "标注规则文档", "Golden Set", "AQL"],
+    "is_trainer": true
+  },
+  {
+    "id": "jd_005",
+    "company": "腾讯",
+    "role_title": "AI 训练师（多模态）",
+    "segment_type": "requirements",
+    "segment_text": "1. 熟悉文生图 / 文生视频 / VQA / ASR / TTS 等多模态数据标注与评测；2. 能制定多维度评测体系（画面真实度、提示词一致性、安全性等）；3. 熟悉至少 3 款多模态模型（Sora / 可灵 / 豆包 / Gemini 等）；4. 能横评多款模型并输出选型报告。",
+    "sub_direction": ["多模态-图", "多模态-视频", "多模态-音"],
+    "must_have_skills": ["多模态评测", "多维度评分", "多模型横评"],
+    "is_trainer": true
+  },
+  {
+    "id": "jd_006",
+    "company": "美团",
+    "role_title": "AI 训练师（垂直场景）",
+    "segment_type": "scenario",
+    "segment_text": "围绕外卖 / 到店 / 商品推荐等场景，进行 Prompt 工程与模型效果优化；针对拦截率、推荐精度等业务指标制定评测维度；推动模型在垂直场景的可用性提升。",
+    "sub_direction": ["对话", "推荐"],
+    "must_have_skills": ["Prompt 工程", "拦截率", "业务指标"],
+    "is_trainer": true
+  }
+]

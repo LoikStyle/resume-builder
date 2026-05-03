@@ -1,0 +1,103 @@
+import { z } from 'zod';
+
+/** AI 训练师/评测岗位简历 Schema */
+export const BasicSchema = z.object({
+  name: z.string(),
+  objective: z.string(),
+  phone: z.string(),
+  email: z.string(),  // 不强校验邮箱格式，Claude 可能填占位符；学生在编辑器里改
+  birth: z.string().optional(),
+  hometown: z.string().optional(),
+  politicalStatus: z.string().optional(),
+  photo: z.string().optional(),
+});
+
+export const EducationSchema = z.object({
+  period: z.string(),
+  school: z.string(),
+  major: z.string(),
+  degree: z.enum(['本科', '硕士', '博士']).optional(),
+  gpa: z.string().optional(),
+  courses: z.string().optional(),
+});
+
+export const ExperienceTypeEnum = z.enum([
+  'internship',
+  'training_project',
+  'campus',
+  'competition',
+]);
+
+export const TaskTypeEnum = z.enum([
+  '标注',
+  '评测',
+  '数据生产',
+  '规则设计',
+  '质检',
+  'Prompt工程',
+  '多模型对比',
+]);
+
+export const DataModalityEnum = z.enum([
+  '对话/SFT',
+  'CoT',
+  'RLHF',
+  'RAG',
+  'Agent',
+  '多模态-图',
+  '多模态-视频',
+  '多模态-音',
+]);
+
+export const ExperienceSchema = z.object({
+  id: z.string(),
+  type: ExperienceTypeEnum,
+  period: z.string().optional(),
+  org: z.string(),
+  role: z.string(),
+  background: z.string(),
+  actions: z.array(z.string()).min(2),
+  results: z.array(z.string()).min(1),
+  taskType: z.array(TaskTypeEnum).optional(),
+  dataModality: z.array(DataModalityEnum).optional(),
+  modelsUsed: z.array(z.string()).optional(),
+  toolsUsed: z.array(z.string()).optional(),
+});
+
+export const SkillSchema = z.object({
+  name: z.string(),
+  level: z.enum(['了解', '熟练', '精通']).optional(),
+  category: z.enum(['模型', '评测框架', '标注方法', '自动化工具', '通用']).optional(),
+});
+
+export const ResumeSchema = z.object({
+  basic: BasicSchema,
+  selfEvaluation: z.string().max(300),
+  education: z.array(EducationSchema).min(1),
+  experiences: z.array(ExperienceSchema).min(4).max(6),
+  skills: z.array(SkillSchema),
+  honors: z.array(z.string()).optional(),
+});
+
+export type Resume = z.infer<typeof ResumeSchema>;
+export type Experience = z.infer<typeof ExperienceSchema>;
+export type Skill = z.infer<typeof SkillSchema>;
+export type Education = z.infer<typeof EducationSchema>;
+
+export type TemplateKind = 'dense' | 'loose' | 'structured';
+
+/** 段 0 追问表单的回答结构 */
+export type IntakeAnswers = {
+  roleDirection: 'annotation' | 'eval' | 'mixed';
+  sceneInterests: string[];
+  courseProjects: string[];
+  pathwayScene?: string;
+  modelsTools: {
+    模型: string[];
+    评测框架: string[];
+    自动化工具: string[];
+    标注方法: string[];
+  };
+  roleInProject: string;
+  highlights: string[];
+};
