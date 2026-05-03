@@ -80,7 +80,8 @@ export type TemplateKind = 'dense' | 'loose' | 'structured';
  *  保留 WorkYears 类型导出，避免破坏 V2 demo 链路里的 prompt 引用
  */
 export type WorkYears = '0' | '<1' | '1-3' | '>3';
-export type AIIndustryYears = '<6m' | '6m-1y' | '1-2y' | '>2y';
+/** V3.2：1-2y 和 >2y 合并成 1y+（用户决策：训练师岗这两档表现接近） */
+export type AIIndustryYears = '<6m' | '6m-1y' | '1y+';
 export type ResumeStructure =
   | 'minimal-bw'              // 黑白极简（上下）
   | 'blue-fresh'              // 蓝色应届（上下）

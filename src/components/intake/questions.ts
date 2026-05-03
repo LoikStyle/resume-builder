@@ -11,11 +11,11 @@
 import { INDUSTRIES } from '@/lib/industries';
 import type { AIIndustryYears, ResumeStructure } from '@/lib/schema/resume';
 
+/** V3.2：1-2y 和 >2y 合并（用户决策：这两档训练师岗位描述特征接近） */
 export const AI_YEARS_OPTIONS: { value: AIIndustryYears; label: string; hint: string }[] = [
-  { value: '<6m', label: '不到半年', hint: '应届 / 刚入行' },
-  { value: '6m-1y', label: '半年-1 年', hint: '初级训练师' },
-  { value: '1-2y', label: '1-2 年', hint: '中阶 / 偏执行+局部规则' },
-  { value: '>2y', label: '2 年以上', hint: '高阶 / 偏管理+战略' },
+  { value: '<6m', label: '不到半年', hint: '应届 / 刚入行 / 偏执行' },
+  { value: '6m-1y', label: '半年-1 年', hint: '初级训练师 / 局部规则参与' },
+  { value: '1y+', label: '1 年以上', hint: '中阶/高阶 / 主导规则 + 跨职能协同' },
 ];
 
 /** 6 种结构风格（对应可画 6 份模板的视觉特征） */
@@ -63,32 +63,67 @@ export const STRUCTURE_OPTIONS: {
   },
 ];
 
-/** 高亮可选字段—— 学生选哪些维度在简历里重点突出
- *  V3.1：前端先做字段维度选择；未来在编辑器里学生可点选具体哪句话标高亮
+/** 高亮可选字段—— V3.2 细化到 16 项
+ *  分组：量化指标 / 方法论 / 工具与模型 / 业务能力
+ *  前端先做字段维度选择；未来在结果页可点选具体哪句话标高亮
  */
 export const HIGHLIGHT_OPTIONS = [
-  '量化结果（评测维度数 / 模型对比数）',
-  '行业场景（小红书 / 电商 / 多模态等）',
-  '团队角色（独立完成 / 主导规则 / 质检负责）',
-  '规则方法论（标注规范 / Bad Case 归因 / Golden Set）',
-  'AI 行业年限',
-  '具体项目名（用粗体突出 RAG / Agent / 多模态 等）',
+  // 量化指标（最容易让 HR 一眼看到）
+  '评测维度数（"5 维度评分体系"）',
+  '模型对比数（"6 款主流模型横评"）',
+  '场景覆盖数（"覆盖美妆/旅行/数码 等 N 类"）',
+  'Bad Case 类别数（"归纳 5 类高频 Bad Case"）',
+  '数据规模（数千条 / 万级别 / 全量验收）',
+  '评测报告数量（"输出 N 份评测报告"）',
+  '拦截率 / 通过率提升',
+  '标注一致性 / 黄金集 Kappa',
+  // 方法论 & 流程
+  '标注规则文档（决策树 / 边界 case）',
+  '端到端流程（承接需求 → 复盘交付）',
+  'Bad Case 归因报告 + 改进建议',
+  'Prompt 工程能力（temperature / top_p 调优）',
+  // 工具与模型
+  '具体项目名（RAG / Agent / 多模态 / VLM 等）',
   '工具熟悉度（GPT-4 / Claude / Dify / OpenCompass）',
-  '量化亮点 bullet（最优结果一句话）',
+  // 业务与软实力
+  '行业场景（小红书 / 电商 / 短视频等）',
+  '跨团队协同 / 项目管理',
 ] as const;
 
 export const INDUSTRY_OPTIONS = INDUSTRIES.map((c) => c.name);
 
-/** 课程项目（V3.1 沿用） */
+/** 课程项目（V3.2 按笔记全量扩展，21 项）
+ *  分组：对话/SFT、推理/CoT、偏好/RLHF、Agent、多模态、专项垂类、横评、自动化
+ */
 export const COURSE_PROJECT_OPTIONS = [
-  'RAG 数据质量评估',
+  // 对话 / SFT
+  'SFT 单轮对话标注',
+  'SFT 多轮对话标注',
+  // 推理
   'CoT 推理过程标注',
-  'SFT 数据生产（单轮 / 多轮）',
+  // 偏好对齐
   'RLHF 偏好标注',
+  'DPO 偏好对标注',
+  // 检索
+  'RAG 数据质量评估',
+  // Agent
   'Agent ReAct 轨迹标注',
+  'Agent Tool 调用质量评测',
+  // 多模态 - 视觉
   '多模态 T2I 文生图评测',
   '多模态 T2V 文生视频评测',
   'VLM 视觉语言模型评测',
+  'VQA 视觉问答标注',
+  '图像描述（Image Caption）标注',
+  // 多模态 - 音视频
+  'TTS 文字转语音评测',
+  'ASR 语音识别标注',
+  '数字人 / 配音评测',
+  // 专项垂类
+  '角色扮演数据标注 / 评测',
+  '视频生成 / 短剧脚本评测',
+  '世界模型 / 具身智能评测',
+  // 横评 + 自动化
   '多模型横评',
   'Dify SFT 数据自动合成',
   '小组评测路演',

@@ -51,12 +51,11 @@ const initialState: FormState = {
   resumeStructure: 'blue-fresh',
 };
 
-/** AI 年限到 V2 workYears 的映射（demo 链路兼容） */
+/** AI 年限到 V2 workYears 的映射（demo 链路兼容；V3.2 三档） */
 function deriveWorkYears(ai: AIIndustryYears): '0' | '<1' | '1-3' | '>3' {
   if (ai === '<6m') return '0';
   if (ai === '6m-1y') return '<1';
-  if (ai === '1-2y') return '1-3';
-  return '>3';
+  return '1-3';  // 1y+ → V2 demo 走 1-3 档（中阶动词风格）
 }
 
 export default function IntakeForm() {

@@ -58,17 +58,17 @@
 
 | 飞书字段名 | 飞书类型 | 来自前端的字段 | 选项 / 示例 |
 |---|---|---|---|
-| `课程项目` | 多选 | `intakeAnswers.courseProjects` | 11 项：RAG 数据质量评估 / CoT 推理过程标注 / SFT 数据生产（单轮/多轮）/ RLHF 偏好标注 / Agent ReAct 轨迹标注 / 多模态 T2I 文生图评测 / 多模态 T2V 文生视频评测 / VLM 视觉语言模型评测 / 多模型横评 / Dify SFT 数据自动合成 / 小组评测路演 |
+| `课程项目` | 多选 | `intakeAnswers.courseProjects` | **21 项**（V3.2 按笔记扩全）：SFT 单轮 / SFT 多轮 / CoT 推理 / RLHF 偏好 / DPO 偏好对 / RAG 评估 / Agent ReAct 轨迹 / Agent Tool 调用 / T2I 文生图评测 / T2V 文生视频评测 / VLM 视觉语言模型评测 / VQA 视觉问答标注 / 图像描述 Image Caption / TTS 文字转语音 / ASR 语音识别 / 数字人 配音评测 / 角色扮演数据 / 视频生成 短剧脚本 / 世界模型 具身智能 / 多模型横评 / Dify SFT 自动合成 / 小组评测路演 |
 | `路演场景` | 文本 | `intakeAnswers.pathwayScene` | 仅当 courseProjects 含"小组评测路演"时填 |
-| `行业大类` | 单选 | `intakeAnswers.industryCategory` | 13 项见 `src/lib/industries.ts` |
-| `细分场景` | 文本（分号分隔）| `intakeAnswers.subScenarios.join('；')` | 1-3 个 AI 实时生成的场景 |
+| `行业大类` | 单选 | `intakeAnswers.industryCategory` | **22 项**（V3.2 扩展）：电商 / 小红书内容 / 短视频内容 / 影视化创作 / 内容创作 文案 / 营销 投放 / 教育 / 医疗 / 法律 / 金融 / 文旅 / 智能客服 / 角色扮演 虚拟陪伴 / 数字人 配音 / 多模态 / Agent Tool / RAG 知识库 / 具身智能 世界模型 / 编程 代码助手 / 翻译 多语言 / 游戏 互动剧本 / 其他垂直 |
+| `细分场景` | 文本（分号分隔）| `intakeAnswers.subScenarios.join('；')` | 1-3 个 AI 实时生成的场景（V3.2 不动） |
 
 ### C 段：偏好（V3.1 板书新增 3 字段）
 
 | 飞书字段名 | 飞书类型 | 来自前端的字段 | 选项 |
 |---|---|---|---|
-| `AI 行业年限` | 单选 | `intakeAnswers.aiIndustryYears` | `<6m`（不到半年，应届）/ `6m-1y`（半年-1 年）/ `1-2y`（1-2 年）/ `>2y`（2 年以上） |
-| `高亮字段` | 多选 | `intakeAnswers.highlightFields` | 8 项白名单：**量化结果**（评测维度数/模型对比数）/ **行业场景**（小红书/电商等）/ **团队角色** / **规则方法论**（标注规范/Bad Case 归因/Golden Set）/ **AI 行业年限** / **具体项目名** / **工具熟悉度**（GPT-4/Claude/Dify）/ **量化亮点 bullet** |
+| `AI 行业年限` | 单选 | `intakeAnswers.aiIndustryYears` | **3 档**（V3.2 合并 1-2y 与 >2y）：`<6m`（不到半年，应届）/ `6m-1y`（半年-1 年）/ `1y+`（1 年以上） |
+| `高亮字段` | 多选 | `intakeAnswers.highlightFields` | **16 项**（V3.2 细化）：评测维度数 / 模型对比数 / 场景覆盖数 / Bad Case 类别数 / 数据规模 / 评测报告数量 / 拦截率提升 / 标注一致性 / 标注规则文档 / 端到端流程 / Bad Case 归因报告 / Prompt 工程能力 / 具体项目名 / 工具熟悉度 / 行业场景 / 跨团队协同 |
 | `简历结构偏好` | 单选 | `intakeAnswers.resumeStructure` | **6 选 1**（V3.1 扩展）：`minimal-bw` 极简黑白 / `blue-fresh` 蓝色应届 / `blue-marketing` 蓝白市场营销 / `business-gray` 灰白商务 / `business-internship` 商务实习 / `purple-teacher` 紫白教师 |
 
 ### ⚠️ 已删字段（V3 有 V3.1 删）
