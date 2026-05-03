@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
     const prompt = PROMPT.replace('{{category}}', category);
 
     // 用 haiku 4.5（比 sonnet 快 5x，分类任务质量足够）
+    // 实测冷启动后 ~48s，留 120s 余量
     const text = await callClaude(prompt, {
       model: 'claude-haiku-4-5-20251001',
-      timeoutMs: 60_000,
+      timeoutMs: 120_000,
     });
     const subscenarios = extractJson<Subscenario[]>(text);
 
