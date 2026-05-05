@@ -10,7 +10,7 @@ export const PROJECT_DIRECTION_OPTIONS: { value: ProjectDirection; label: string
   { value: '多模态', label: '多模态', hint: '文生图 / 文生视频 / VQA / Caption 等' },
   { value: '文本模型', label: '文本模型', hint: 'SFT / RAG / CoT / Agent / RM 等' },
   { value: '混合', label: '混合', hint: '两种都做过' },
-  { value: '通用美学', label: '实习生/大厂实习/不细分垂类', hint: '' },
+  { value: '通用美学', label: '通用美学', hint: '实习生/大厂实习/不细分垂类' },
 ];
 
 export const AI_YEARS_OPTIONS: { value: AIIndustryYears; label: string; hint: string }[] = [
