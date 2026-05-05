@@ -43,7 +43,7 @@ export const COURSE_PROJECT_GROUPS: { group: string; items: string[] }[] = [
       '长文本生成评测（小红书 / 公众号 / 知乎）',
       'ASR 语音识别评测',
       '音频理解评测',
-      '多模型横评 / GSB 盲测',
+      '多模型横评',
     ],
   },
   {
