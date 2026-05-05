@@ -4,6 +4,8 @@ import type {
   StructureSample,
 } from '@/lib/coze-client';
 import type { IntakeAnswers, WorkYears } from '@/lib/schema/resume';
+import type { ChainContext } from '@/lib/prompts/chain-steps';
+import { formatChainContext } from '@/lib/prompts/chain-steps';
 
 export function buildGeneratePrompt(args: {
   scenario: string;
@@ -12,6 +14,8 @@ export function buildGeneratePrompt(args: {
   ruleFragments: RuleFragment[];
   jdBlocks: JDBlock[];
   structureSample: StructureSample;
+  dataRangeSection: string;
+  chainContext?: ChainContext;   // Step1+2 推导结果（可选，缺失时降级为原流程）
 }): string {
   const schemaJson = SCHEMA_DESCRIPTION;
   const basic = args.basicInfo ?? {};
@@ -29,12 +33,15 @@ ${yearsHint.fixedItem}
 
 【方向】
 - 行业大类: ${args.intakeAnswers.industryCategory}
-- 细分场景: ${args.intakeAnswers.subScenarios.join('、') || '（无）'}
+- 细分场景: ${(args.intakeAnswers.subScenarios ?? []).join('、') || '（无）'}
 - 做过的项目: ${args.intakeAnswers.courseProjects.join('、')}
-- 模型/工具: （V3.1 起前端不再单独收集，根据项目类型推断常用工具：RAG → Dify/向量库；Agent → ReAct 框架；多模态 → Sora/可灵 等）
+- 模型/工具: 根据项目类型推断常用工具（RAG → Dify/向量库；Agent → ReAct 框架；多模态 → Sora/可灵 等）
 ${args.intakeAnswers.pathwayScene ? `- 路演场景: ${args.intakeAnswers.pathwayScene}` : ''}
 ${args.scenario ? `- 学生原话: ${args.scenario}` : ''}
 
+${args.dataRangeSection}
+
+${args.chainContext ? formatChainContext(args.chainContext) + '\n' : ''}
 【规则维度参考】（学方法论，禁止抄原文）
 ${args.ruleFragments.map((r, i) => `${i + 1}. [${r.rule_dimension}] ${r.fragment}`).join('\n')}
 
@@ -49,7 +56,7 @@ Schema：
 ${schemaJson}
 
 硬约束：
-1. **不写数据量绝对值**（用"数千条"、"万级别"、"全量"等模糊量化）；**不写项目周期**（experiences 不输出 period 字段；education 写时间）
+1. **数据量必须写具体数字**——按【数据量范围约束】取整数值写入 results；每个项目取不同随机值；禁止写"数千条"、"万级别"等模糊词；**不写项目周期**（experiences 不输出 period 字段；education 写时间）
 2. 量化用训练师维度：维度数 / 模型对比数 / 场景覆盖数 / Bad Case 类别数 / 拦截率。**禁止算法指标**（FID / 推理速度 / 训练 epoch）
 3. experiences 4-6 项；type 区分 internship/training_project/campus/competition；学生勾选的课程项目少于 4 个时从课程范围（RAG/CoT/Agent/多模态/横评/Dify SFT）补齐
 4. 每个 experience 必须三段 background（≤80字）/ actions（≥2条 30-60字）/ results（≥1条带量化）

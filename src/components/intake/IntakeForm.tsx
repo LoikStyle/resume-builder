@@ -1,38 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AI_YEARS_OPTIONS,
-  STRUCTURE_OPTIONS,
-  HIGHLIGHT_OPTIONS,
-  INDUSTRY_OPTIONS,
-  COURSE_PROJECT_OPTIONS,
+  HIGHLIGHT_GROUPS,
+  COURSE_PROJECT_GROUPS,
+  PROJECT_DIRECTION_OPTIONS,
 } from './questions';
-import SubscenarioPicker from './SubscenarioPicker';
+import { INDUSTRIES } from '@/lib/industries';
 import { useResumeStore } from '@/store/resume-store';
-import type {
-  IntakeAnswers,
-  AIIndustryYears,
-  ResumeStructure,
-} from '@/lib/schema/resume';
+import type { IntakeAnswers, AIIndustryYears, ProjectDirection } from '@/lib/schema/resume';
+import { validateField, validateBasicInfo, type FieldKey } from '@/lib/validators';
 
 type FormState = {
-  // 基本信息
   name: string;
   phone: string;
   email: string;
   school: string;
   major: string;
   graduation: string;
-  // V3.1 段 0（顺序：项目（前置） → 大类 → AI 年限 → 高亮 → 结构）
+  projectDirection: ProjectDirection | '';
+  courseProjectGroups: string[];
   courseProjects: string[];
   pathwayScene: string;
   industryCategory: string;
+  industrySubtags: string[];
   subScenarios: string[];
   aiIndustryYears: AIIndustryYears;
   highlightFields: string[];
-  resumeStructure: ResumeStructure;
 };
 
 const initialState: FormState = {
@@ -42,34 +37,88 @@ const initialState: FormState = {
   school: '',
   major: '',
   graduation: '',
+  projectDirection: '',
+  courseProjectGroups: [],
   courseProjects: [],
   pathwayScene: '',
   industryCategory: '',
+  industrySubtags: [],
   subScenarios: [],
-  aiIndustryYears: '<6m',
+  aiIndustryYears: '6m',
   highlightFields: [],
-  resumeStructure: 'blue-fresh',
 };
 
-/** AI 年限到 V2 workYears 的映射（demo 链路兼容；V3.2 三档） */
+const COURSE_PROJECT_MAX = 5;
+const HIGHLIGHT_MAX = 5;
+const AESTHETIC_SUBTAG_MAX = 3;
+const SUBMIT_LIMIT = 3;
+const SUBMIT_COUNT_KEY = 'resume:submit-count';
+
+type AuthUser = {
+  union_id: string;
+  name: string;
+  email?: string;
+  mobile?: string;
+};
+
 function deriveWorkYears(ai: AIIndustryYears): '0' | '<1' | '1-3' | '>3' {
-  if (ai === '<6m') return '0';
-  if (ai === '6m-1y') return '<1';
-  return '1-3';  // 1y+ → V2 demo 走 1-3 档（中阶动词风格）
+  if (ai === '6m') return '<1';
+  if (ai === '1y') return '1-3';
+  return '>3';
 }
 
 export default function IntakeForm() {
-  const router = useRouter();
   const sourceInput = useResumeStore((s) => s.sourceInput);
   const setSourceInput = useResumeStore((s) => s.setSourceInput);
-  const setResume = useResumeStore((s) => s.setResume);
 
   const [form, setForm] = useState<FormState>(initialState);
   const [submitting, setSubmitting] = useState(false);
-  const [submitMode, setSubmitMode] = useState<'feishu' | 'demo' | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [feishuResult, setFeishuResult] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [honeypot, setHoneypot] = useState('');
+  const [submitCount, setSubmitCount] = useState(0);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // 加载提交计数 + 拉登录态
+  useEffect(() => {
+    const cached = parseInt(localStorage.getItem(SUBMIT_COUNT_KEY) || '0', 10);
+    setSubmitCount(Number.isFinite(cached) ? cached : 0);
+
+    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/auth/me`)
+      .then((r) => r.json())
+      .then((j: { loggedIn?: boolean; user?: AuthUser }) => {
+        if (j.loggedIn && j.user) {
+          setAuthUser(j.user);
+          // 自动预填基本信息
+          setForm((f) => ({
+            ...f,
+            name: f.name || j.user!.name || '',
+            email: f.email || j.user!.email || '',
+            phone: f.phone || (j.user!.mobile ? j.user!.mobile.replace(/^\+86/, '') : ''),
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  const currentIndustry = useMemo(
+    () => INDUSTRIES.find((c) => c.name === form.industryCategory),
+    [form.industryCategory]
+  );
+
+  const industryGroups = useMemo(() => {
+    const map = new Map<string, typeof INDUSTRIES>();
+    for (const ind of INDUSTRIES) {
+      const arr = map.get(ind.group) ?? [];
+      arr.push(ind);
+      map.set(ind.group, arr);
+    }
+    return Array.from(map.entries());
+  }, []);
 
   useEffect(() => {
     if (!submitting) {
@@ -83,8 +132,33 @@ export default function IntakeForm() {
     return () => clearInterval(t);
   }, [submitting]);
 
+  // 选「通用美学」方向 → 自动锁行业 = 通用美学（实习/大厂固化路线）
+  useEffect(() => {
+    if (form.projectDirection === '通用美学' && form.industryCategory !== '通用美学') {
+      setForm((f) => ({
+        ...f,
+        industryCategory: '通用美学',
+        industrySubtags: [],
+      }));
+    }
+  }, [form.projectDirection, form.industryCategory]);
+
+  // 取消选某个一级分组时，自动剔除该组下已选的二级项
+  useEffect(() => {
+    setForm((f) => {
+      const allowed = new Set(
+        COURSE_PROJECT_GROUPS.filter((g) => f.courseProjectGroups.includes(g.group)).flatMap(
+          (g) => g.items
+        )
+      );
+      const filtered = f.courseProjects.filter((p) => allowed.has(p));
+      if (filtered.length === f.courseProjects.length) return f;
+      return { ...f, courseProjects: filtered };
+    });
+  }, [form.courseProjectGroups]);
+
   const toggleArray = (
-    key: 'subScenarios' | 'courseProjects' | 'highlightFields',
+    key: 'courseProjects' | 'courseProjectGroups' | 'highlightFields' | 'industrySubtags',
     value: string,
     max?: number
   ) => {
@@ -97,22 +171,40 @@ export default function IntakeForm() {
   };
 
   function validate(): string | null {
-    if (!form.name.trim() || !form.school.trim()) return '请至少填姓名和毕业院校';
-    if (form.courseProjects.length === 0) return '至少勾选 1 个课程项目';
+    const basicErrors = validateBasicInfo({
+      name: form.name,
+      school: form.school,
+      major: form.major,
+      phone: form.phone,
+      email: form.email,
+      graduation: form.graduation,
+    });
+    if (basicErrors.length > 0) {
+      const errMap: Partial<Record<FieldKey, string>> = {};
+      for (const e of basicErrors) errMap[e.field] = e.error;
+      setFieldErrors(errMap);
+      return basicErrors[0].error;
+    }
+    setFieldErrors({});
+    if (!form.projectDirection) return '请选模型方向';
+    if (form.courseProjects.length === 0) return '至少勾选 1 个具体项目';
     if (!form.industryCategory) return '请选 1 个行业大类';
     return null;
   }
 
   function buildPayload() {
+    if (!form.projectDirection) {
+      throw new Error('内部错误：projectDirection 未选');
+    }
     const answers: IntakeAnswers = {
+      projectDirection: form.projectDirection,
+      courseProjectGroups: form.courseProjectGroups,
       courseProjects: form.courseProjects,
       pathwayScene: form.pathwayScene || undefined,
       industryCategory: form.industryCategory,
-      subScenarios: form.subScenarios,
+      industrySubtags: form.industrySubtags,
       aiIndustryYears: form.aiIndustryYears,
       highlightFields: form.highlightFields,
-      resumeStructure: form.resumeStructure,
-      // demo 链路兼容
       workYears: deriveWorkYears(form.aiIndustryYears),
     };
     const basicInfo = {
@@ -126,36 +218,42 @@ export default function IntakeForm() {
     return { answers, basicInfo };
   }
 
-  async function handleSubmitFeishu() {
+  async function handleSubmit() {
+    if (!authUser) {
+      setError('请先点右上角「飞书登录」');
+      return;
+    }
+    if (submitCount >= SUBMIT_LIMIT) {
+      setError(`已达提交上限（${SUBMIT_LIMIT} 次），如需修改请联系老师`);
+      return;
+    }
     const err = validate();
     if (err) return setError(err);
 
     const { answers, basicInfo } = buildPayload();
     setSourceInput(sourceInput.scenario, answers);
     setSubmitting(true);
-    setSubmitMode('feishu');
     setError(null);
     setFeishuResult(null);
 
     try {
-      const resp = await fetch('/api/export-feishu', {
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/export-feishu`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          scenario: sourceInput.scenario,
           intakeAnswers: answers,
           basicInfo,
+          _honeypot: honeypot,
         }),
       });
       const ct = resp.headers.get('content-type') || '';
       if (ct.includes('application/json')) {
         const j = (await resp.json()) as { mode?: string; record_id?: string; error?: string };
         if (!resp.ok) throw new Error(j.error ?? '导出失败');
-        setFeishuResult(
-          j.mode === 'feishu-direct' || j.mode === 'feishu-relay'
-            ? `✅ 已写入飞书多维表格（${j.mode}, record_id: ${j.record_id ?? '?'}）`
-            : `✅ ${j.mode}`
-        );
+        const newCount = submitCount + 1;
+        setSubmitCount(newCount);
+        try { localStorage.setItem(SUBMIT_COUNT_KEY, String(newCount)); } catch {}
+        setFeishuResult(`✅ 提交成功（${newCount}/${SUBMIT_LIMIT}，record_id: ${j.record_id ?? '?'}）`);
       } else {
         const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
@@ -166,162 +264,317 @@ export default function IntakeForm() {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        setFeishuResult('📥 已下载 JSON（飞书凭证未配置，老师可手动导入飞书多维表格）');
+        setFeishuResult('📥 已下载 JSON（飞书凭证未配置时的兜底）');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : '导出失败');
     } finally {
       setSubmitting(false);
-      setSubmitMode(null);
     }
   }
 
-  async function handleSubmitDemo() {
-    const err = validate();
-    if (err) return setError(err);
-
-    const { answers, basicInfo } = buildPayload();
-    setSourceInput(sourceInput.scenario, answers);
-    setSubmitting(true);
-    setSubmitMode('demo');
-    setError(null);
-
-    try {
-      const resp = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scenario: sourceInput.scenario,
-          intakeAnswers: answers,
-          basicInfo,
-        }),
-      });
-      if (!resp.ok) throw new Error(`生成失败：${resp.status}`);
-      const json = (await resp.json()) as { resume?: unknown; error?: string };
-      if (json.error) throw new Error(json.error);
-      if (!json.resume) throw new Error('未返回 resume 字段');
-      setResume(json.resume as never);
-      router.push('/editor');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '未知错误');
-      setSubmitting(false);
-      setSubmitMode(null);
-    }
+  // 未登录或还在检查登录态时，显示登录门禁
+  if (authChecked && !authUser) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-6">
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+          <h1 className="text-xl font-semibold">请先登录飞书</h1>
+          <p className="text-sm text-slate-600">
+            为了防止冒名提交，每位学生需用本人飞书账号登录。一次登录有效 24 小时。
+          </p>
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/auth/feishu/start`}
+            className="block w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium text-center hover:bg-blue-700"
+          >
+            飞书一键登录
+          </a>
+          <p className="text-xs text-slate-400 text-center">
+            登录会自动预填你的姓名 / 邮箱 / 手机号
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (!authChecked) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-sm text-slate-500">
+        登录态加载中…
+      </div>
+    );
   }
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-8 py-8 px-6">
-      <header className="space-y-2">
-        <p className="text-sm text-blue-600 font-medium">
-          基本信息 + 5 题（V3.1）
-        </p>
-        <h1 className="text-2xl font-bold">告诉我你的项目、方向和偏好</h1>
-        <p className="text-sm text-slate-500">
-          后台 AI 工作流会基于你的选择生成<strong>简历内容片段</strong>，你可以粘到自己挑的模板里。
-        </p>
+      {/* honeypot：机器人会填，真人看不见 */}
+      <input
+        type="text"
+        name="_company"
+        tabIndex={-1}
+        autoComplete="off"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0 }}
+        aria-hidden="true"
+      />
+
+      <header className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold">告诉我你的项目、方向和偏好</h1>
+          <p className="text-sm text-slate-500">
+            填完提交，会写入飞书多维表格 · 已登录：<span className="text-blue-600">{authUser?.name}</span>
+          </p>
+        </div>
+        <div className="text-xs text-slate-500 shrink-0 text-right space-y-1">
+          <div>已提交 {submitCount}/{SUBMIT_LIMIT} 次</div>
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/auth/logout`, { method: 'POST' });
+              location.reload();
+            }}
+            className="text-slate-400 hover:text-slate-600 underline"
+          >
+            退出登录
+          </button>
+        </div>
       </header>
 
       {/* 基本信息 */}
       <section className="space-y-3 bg-blue-50/50 border border-blue-100 rounded-lg p-4">
         <h2 className="font-semibold text-base text-blue-900">基本信息</h2>
         <div className="grid grid-cols-2 gap-3">
-          <BasicField label="姓名 *" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} placeholder="张三" />
-          <BasicField label="毕业院校 *" value={form.school} onChange={(v) => setForm((f) => ({ ...f, school: v }))} placeholder="某某大学" />
-          <BasicField label="手机号" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} placeholder="13800138000" />
-          <BasicField label="邮箱" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="zhangsan@example.com" />
-          <BasicField label="专业" value={form.major} onChange={(v) => setForm((f) => ({ ...f, major: v }))} placeholder="计算机科学与技术" />
-          <BasicField label="毕业时间" value={form.graduation} onChange={(v) => setForm((f) => ({ ...f, graduation: v }))} placeholder="2025.06" />
+          <BasicField label="姓名 *" value={form.name} fieldKey="name" placeholder="张三"
+            onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+            error={fieldErrors.name} setError={(e) => setFieldErrors((m) => ({ ...m, name: e }))} />
+          <BasicField label="毕业院校 *" value={form.school} fieldKey="school" placeholder="某某大学"
+            onChange={(v) => setForm((f) => ({ ...f, school: v }))}
+            error={fieldErrors.school} setError={(e) => setFieldErrors((m) => ({ ...m, school: e }))} />
+          <BasicField label="手机号" value={form.phone} fieldKey="phone" placeholder="13800138000"
+            onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+            error={fieldErrors.phone} setError={(e) => setFieldErrors((m) => ({ ...m, phone: e }))} />
+          <BasicField label="邮箱" value={form.email} fieldKey="email" placeholder="zhangsan@example.com"
+            onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+            error={fieldErrors.email} setError={(e) => setFieldErrors((m) => ({ ...m, email: e }))} />
+          <BasicField label="专业 *" value={form.major} fieldKey="major" placeholder="计算机科学与技术"
+            onChange={(v) => setForm((f) => ({ ...f, major: v }))}
+            error={fieldErrors.major} setError={(e) => setFieldErrors((m) => ({ ...m, major: e }))} />
+          <BasicField label="毕业时间" value={form.graduation} fieldKey="graduation" placeholder="2025.06"
+            onChange={(v) => setForm((f) => ({ ...f, graduation: v }))}
+            error={fieldErrors.graduation} setError={(e) => setFieldErrors((m) => ({ ...m, graduation: e }))} />
         </div>
       </section>
 
-      {/* Q1 课程项目（最前） */}
+      {/* Q0 模型方向 */}
       <section className="space-y-3">
         <h2 className="font-semibold text-base">
           <span className="text-blue-600 mr-2">1.</span>
-          做过的项目（多选，*）
+          模型方向（单选 *）
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {COURSE_PROJECT_OPTIONS.map((proj) => {
-            const selected = form.courseProjects.includes(proj);
+        <div className="grid grid-cols-3 gap-2">
+          {PROJECT_DIRECTION_OPTIONS.map((opt) => {
+            const selected = form.projectDirection === opt.value;
             return (
               <button
-                key={proj}
+                key={opt.value}
                 type="button"
-                onClick={() => toggleArray('courseProjects', proj)}
-                className={`text-sm px-3 py-2 rounded-lg border transition ${
+                onClick={() => setForm((f) => ({ ...f, projectDirection: opt.value }))}
+                className={`text-sm px-3 py-2.5 rounded-lg border transition text-left ${
                   selected
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
                     : 'bg-white border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {proj}
+                <div className="font-medium">{opt.label}</div>
+                <div className="text-xs text-slate-500 mt-0.5">{opt.hint}</div>
               </button>
             );
           })}
         </div>
-        {form.courseProjects.includes('小组评测路演') && (
-          <input
-            type="text"
-            value={form.pathwayScene}
-            onChange={(e) => setForm((f) => ({ ...f, pathwayScene: e.target.value }))}
-            placeholder="补充：路演的具体场景（如教育题目评测 / 客服 Bad Case 分析）"
-            className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      </section>
+
+      {/* Q2 做过的项目（标注 + 评测，可同时选，总数 ≤5） */}
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-semibold text-base">
+            <span className="text-blue-600 mr-2">2.</span>
+            做过的项目（标注 / 评测可同时选 *）
+          </h2>
+          <span className="text-xs text-slate-500">
+            已选 {form.courseProjects.length}/{COURSE_PROJECT_MAX}
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs text-slate-500">
+            先选方向（标注 / 评测，可全选）
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {COURSE_PROJECT_GROUPS.map((g) => {
+              const selected = form.courseProjectGroups.includes(g.group);
+              return (
+                <button
+                  key={g.group}
+                  type="button"
+                  onClick={() => toggleArray('courseProjectGroups', g.group)}
+                  className={`text-sm px-3 py-1.5 rounded-full border transition ${
+                    selected
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400'
+                  }`}
+                >
+                  {g.group}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {form.courseProjectGroups.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-slate-500">
+              再选具体任务（总数 ≤ {COURSE_PROJECT_MAX}）
+            </p>
+            {COURSE_PROJECT_GROUPS.filter((g) => form.courseProjectGroups.includes(g.group)).map(
+              (g) => (
+                <div key={g.group} className="space-y-1">
+                  <p className="text-[11px] text-slate-400">{g.group}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {g.items.map((proj) => {
+                      const selected = form.courseProjects.includes(proj);
+                      const disabled = !selected && form.courseProjects.length >= COURSE_PROJECT_MAX;
+                      return (
+                        <button
+                          key={proj}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => toggleArray('courseProjects', proj, COURSE_PROJECT_MAX)}
+                          className={`text-xs px-2.5 py-1 rounded border transition ${
+                            selected
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
+                              : disabled
+                                ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                                : 'bg-white border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {proj}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
         )}
       </section>
 
-      {/* Q2 行业大类 */}
-      <section className="space-y-3">
-        <h2 className="font-semibold text-base">
-          <span className="text-blue-600 mr-2">2.</span>
-          行业场景大类（单选 1 个，*）
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {INDUSTRY_OPTIONS.map((cat) => {
-            const selected = form.industryCategory === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() =>
-                  setForm((f) => ({ ...f, industryCategory: cat, subScenarios: [] }))
-                }
-                className={`text-sm px-3 py-2 rounded-lg border transition ${
-                  selected
-                    ? 'bg-blue-50 border-blue-500 text-blue-700'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Q2.5 AI 动态细分场景（选完大类自动出） */}
-      {form.industryCategory && (
-        <section className="space-y-3">
-          <h2 className="font-semibold text-base">
-            <span className="text-blue-600 mr-2">2b.</span>
-            细分场景（AI 生成，多选 1-3 个）
-          </h2>
-          <SubscenarioPicker
-            category={form.industryCategory}
-            courseProjects={form.courseProjects}
-            selected={form.subScenarios}
-            onToggle={(name) => toggleArray('subScenarios', name, 3)}
-          />
-        </section>
-      )}
-
-      {/* Q3 AI 行业年限 */}
+      {/* Q3 行业大类 + 二级专业标签 */}
       <section className="space-y-3">
         <h2 className="font-semibold text-base">
           <span className="text-blue-600 mr-2">3.</span>
+          行业（单选 *）
+        </h2>
+        {form.projectDirection === '通用美学' && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+            已选「通用美学」方向，行业自动锁定为「通用美学」（实习生 / 大厂通用线，固化 PE）
+          </p>
+        )}
+        <div className="space-y-3">
+          {industryGroups.map(([groupName, list]) => (
+            <div key={groupName} className="space-y-1.5">
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                {groupName}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {list.map((cat) => {
+                  const selected = form.industryCategory === cat.name;
+                  const lockedByAesthetic =
+                    form.projectDirection === '通用美学' && cat.name !== '通用美学';
+                  return (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      disabled={lockedByAesthetic}
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          industryCategory: cat.name,
+                          industrySubtags: [],
+                          subScenarios: [],
+                        }))
+                      }
+                      title={cat.description}
+                      className={`text-sm px-3 py-1.5 rounded-full border transition ${
+                        selected
+                          ? 'bg-blue-600 border-blue-600 text-white'
+                          : lockedByAesthetic
+                            ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                            : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {currentIndustry && currentIndustry.subtags.length > 0 && (() => {
+          const isAesthetic = currentIndustry.name === '通用美学';
+          const label = isAesthetic
+            ? `美学维度（多选 1-${AESTHETIC_SUBTAG_MAX}，已选 ${form.industrySubtags.length}/${AESTHETIC_SUBTAG_MAX}）`
+            : '专业方向（单选）';
+          return (
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-slate-500">{label}</p>
+            <div className="flex flex-wrap gap-2">
+              {currentIndustry.subtags.map((tag) => {
+                const selected = form.industrySubtags.includes(tag);
+                const disabled =
+                  isAesthetic &&
+                  !selected &&
+                  form.industrySubtags.length >= AESTHETIC_SUBTAG_MAX;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      if (isAesthetic) {
+                        toggleArray('industrySubtags', tag, AESTHETIC_SUBTAG_MAX);
+                      } else {
+                        setForm((f) => ({
+                          ...f,
+                          industrySubtags: selected ? [] : [tag],
+                        }));
+                      }
+                    }}
+                    className={`text-xs px-2.5 py-1 rounded border transition ${
+                      selected
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : disabled
+                          ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          );
+        })()}
+      </section>
+
+      {/* Q4 AI 行业年限 */}
+      <section className="space-y-3">
+        <h2 className="font-semibold text-base">
+          <span className="text-blue-600 mr-2">4.</span>
           AI 行业年限
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {AI_YEARS_OPTIONS.map((opt) => {
             const selected = form.aiIndustryYears === opt.value;
             return (
@@ -341,73 +594,51 @@ export default function IntakeForm() {
             );
           })}
         </div>
-        <p className="text-xs text-slate-500">
-          后端工作流会根据年限自动调整动词风格（&lt;6m 偏执行；&gt;2y 偏管理）。**用过的工具**会自动写进生成的"个人优势"里，不用单独勾选。
-        </p>
       </section>
 
-      {/* Q4 高亮定制 */}
+      {/* Q5 高亮定制 */}
       <section className="space-y-3">
-        <h2 className="font-semibold text-base">
-          <span className="text-blue-600 mr-2">4.</span>
-          高亮定制（多选，简历里着重突出哪些）
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {HIGHLIGHT_OPTIONS.map((field) => {
-            const selected = form.highlightFields.includes(field);
-            return (
-              <button
-                key={field}
-                type="button"
-                onClick={() => toggleArray('highlightFields', field)}
-                className={`text-sm px-3 py-2 rounded-lg border transition text-left ${
-                  selected
-                    ? 'bg-blue-50 border-blue-500 text-blue-700'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                {field}
-              </button>
-            );
-          })}
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-semibold text-base">
+            <span className="text-blue-600 mr-2">5.</span>
+            高亮定制（多选 1-{HIGHLIGHT_MAX}）
+          </h2>
+          <span className="text-xs text-slate-500">
+            已选 {form.highlightFields.length}/{HIGHLIGHT_MAX}
+          </span>
         </div>
-        <p className="text-xs text-slate-500">
-          后端会用 markdown 加粗（**xxx**）标记你勾的字段；后续可在查看页面再细化到具体哪句话。
-        </p>
-      </section>
-
-      {/* Q5 简历结构偏好 */}
-      <section className="space-y-3">
-        <h2 className="font-semibold text-base">
-          <span className="text-blue-600 mr-2">5.</span>
-          简历结构偏好（参考调性，6 选 1）
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {STRUCTURE_OPTIONS.map((opt) => {
-            const selected = form.resumeStructure === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, resumeStructure: opt.value }))}
-                className={`text-sm px-3 py-3 rounded-lg border transition text-left ${
-                  selected
-                    ? 'bg-blue-50 border-blue-500 text-blue-700'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-medium">{opt.label}</div>
-                  <div className="text-[10px] text-slate-400">{opt.layout}</div>
-                </div>
-                <div className="text-xs text-slate-500 mt-0.5">{opt.hint}</div>
-              </button>
-            );
-          })}
+        <div className="space-y-3">
+          {HIGHLIGHT_GROUPS.map((g) => (
+            <div key={g.group} className="space-y-1.5">
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                {g.group}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {g.items.map((field) => {
+                  const selected = form.highlightFields.includes(field);
+                  const disabled = !selected && form.highlightFields.length >= HIGHLIGHT_MAX;
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => toggleArray('highlightFields', field, HIGHLIGHT_MAX)}
+                      className={`text-sm px-3 py-1.5 rounded-lg border transition text-left ${
+                        selected
+                          ? 'bg-blue-50 border-blue-500 text-blue-700'
+                          : disabled
+                            ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {field}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
-        <p className="text-xs text-slate-500">
-          产品<strong>只生成内容片段</strong>，结构偏好让后端工作流知道用哪种调性写文字（正式 vs 清爽 vs 活泼）；最终模板你<strong>自己挑</strong>（可画 / 五百丁 / Word），把内容粘进去。
-        </p>
       </section>
 
       {error && (
@@ -421,53 +652,18 @@ export default function IntakeForm() {
         </div>
       )}
 
-      {/* 提交按钮：双轨 */}
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={handleSubmitFeishu}
-          disabled={submitting}
-          className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 disabled:bg-slate-300"
-        >
-          {submitting && submitMode === 'feishu'
-            ? `导出中… 已用时 ${elapsedSec}s`
-            : '✅ 提交并导出到飞书多维表格（主路径）'}
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmitDemo}
-          disabled={submitting}
-          className="w-full py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 text-sm font-medium hover:border-slate-400 disabled:bg-slate-100"
-        >
-          {submitting && submitMode === 'demo'
-            ? `本地生成中… ${elapsedSec}s（约 200-300s）`
-            : '🧪 本地 demo 生成（V2 链路：Claude 直接出简历 → 编辑器 → PDF）'}
-        </button>
-      </div>
-
-      {submitting && submitMode === 'feishu' && (
-        <div className="text-xs text-slate-500 space-y-1 bg-slate-50 border border-slate-200 rounded p-3">
-          <p>📡 写入飞书多维表格中…</p>
-          <p>没配凭证时会自动 fallback 下载 JSON 文件，老师手动粘到飞书。</p>
-        </div>
-      )}
-      {submitting && submitMode === 'demo' && (
-        <div className="text-xs text-slate-500 space-y-1 bg-slate-50 border border-slate-200 rounded p-3">
-          <p>📡 调用本地 Claude CLI 生成简历…</p>
-          <p className="font-mono">
-            进度：
-            {elapsedSec < 30
-              ? '初始化检索...'
-              : elapsedSec < 80
-                ? 'Claude 正在思考...'
-                : elapsedSec < 200
-                  ? 'Claude 正在写项目段落...'
-                  : elapsedSec < 350
-                    ? 'Claude 正在润色 + 校验...'
-                    : '已超出预期时长，可能 CLI 异常...'}
-          </p>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={submitting || submitCount >= SUBMIT_LIMIT}
+        className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 disabled:bg-slate-300"
+      >
+        {submitting
+          ? `提交中… ${elapsedSec}s`
+          : submitCount >= SUBMIT_LIMIT
+            ? `已达上限（${SUBMIT_LIMIT}/${SUBMIT_LIMIT}）`
+            : `✅ 提交到飞书多维表格（${submitCount}/${SUBMIT_LIMIT}）`}
+      </button>
     </div>
   );
 }
@@ -477,11 +673,17 @@ function BasicField({
   value,
   onChange,
   placeholder,
+  fieldKey,
+  error,
+  setError,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  fieldKey: FieldKey;
+  error?: string;
+  setError: (e: string | undefined) => void;
 }) {
   return (
     <label className="block">
@@ -489,10 +691,26 @@ function BasicField({
       <input
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          if (error) setError(undefined);
+        }}
+        onBlur={(e) => {
+          const v = e.target.value;
+          if (v.trim() === '' && (fieldKey === 'name' || fieldKey === 'school' || fieldKey === 'major')) {
+            setError(undefined);
+            return;
+          }
+          if (v.trim() === '') return setError(undefined);
+          const err = validateField(fieldKey, v);
+          setError(err ?? undefined);
+        }}
         placeholder={placeholder}
-        className="mt-0.5 w-full text-sm px-3 py-1.5 rounded border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={`mt-0.5 w-full text-sm px-3 py-1.5 rounded border bg-white focus:outline-none focus:ring-2 ${
+          error ? 'border-red-400 focus:ring-red-400' : 'border-slate-200 focus:ring-blue-500'
+        }`}
       />
+      {error && <span className="text-[11px] text-red-600 mt-0.5 inline-block">{error}</span>}
     </label>
   );
 }
