@@ -54,7 +54,7 @@ export const COURSE_PROJECT_GROUPS: { group: string; items: string[] }[] = [
       'I2V 图生视频评测',
       'VLM 视觉理解评测',
       'VQA 视觉问答标注',
-      'Image Caption 图像描述标注',
+      'Caption 图像描述标注',
     ],
   },
 ];
