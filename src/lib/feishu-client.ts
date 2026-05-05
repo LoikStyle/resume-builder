@@ -27,7 +27,6 @@ export function toBitableFields(payload: {
     courseProjectGroups?: string[];
     courseProjects: string[];
     industryCategory: string;
-    industrySubtags?: string[];
     aiIndustryYears: string;
     aiYearsCustom?: string;
   };
@@ -45,7 +44,6 @@ export function toBitableFields(payload: {
     项目类别: i.courseProjectGroups ?? [],
     做过的项目: i.courseProjects,
     '想要做的 AI 方向': i.industryCategory,
-    专业方向: i.industrySubtags ?? [],
     'AI 行业年限': aiYearsValue,
   };
 }
