@@ -24,6 +24,7 @@ export function toBitableFields(payload: {
   basicInfo: Record<string, string>;
   intakeAnswers: {
     projectDirection?: string;
+    courseProjectGroups?: string[];
     courseProjects: string[];
     industryCategory: string;
     aiIndustryYears: string;
@@ -40,6 +41,7 @@ export function toBitableFields(payload: {
     毕业院校: b.school,
     专业: b.major,
     模型方向: i.projectDirection ?? '',
+    项目类别: i.courseProjectGroups ?? [],
     做过的项目: i.courseProjects,
     '想要做的 AI 方向': i.industryCategory,
     'AI 行业年限': aiYearsValue,
