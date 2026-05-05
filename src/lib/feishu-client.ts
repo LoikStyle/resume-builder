@@ -53,14 +53,14 @@ export function toBitableFields(payload: {
   };
 }
 
-/** 过滤出非空字段；所有数组统一存 JSON 字面量字符串（如 ["A","B"]）方便下游解析 */
+/** 过滤出非空字段；数组用顿号拼接成纯文本（如 "A、B、C"） */
 function sanitizeFields(fields: Record<string, unknown>): Record<string, string> {
   const safe: Record<string, string> = {};
   for (const [k, v] of Object.entries(fields)) {
     if (v === null || v === undefined || v === '') continue;
     if (Array.isArray(v)) {
       if (v.length === 0) continue;
-      safe[k] = JSON.stringify(v);
+      safe[k] = (v as unknown[]).join('、');
     } else {
       safe[k] = String(v);
     }
