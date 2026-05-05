@@ -24,7 +24,6 @@ const CATEGORY_LABEL: Record<ProjectCategory, string> = {
 };
 
 const YEARS_LABEL: Record<AIIndustryYears, string> = {
-  '6m': '半年，执行岗',
   '1y': '1年，独立模块',
   '2y': '2年，主导规则 + 跨职能',
 };

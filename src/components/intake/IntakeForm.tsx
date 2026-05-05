@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AI_YEARS_OPTIONS,
-  HIGHLIGHT_GROUPS,
   COURSE_PROJECT_GROUPS,
   PROJECT_DIRECTION_OPTIONS,
 } from './questions';
@@ -24,10 +23,10 @@ type FormState = {
   courseProjects: string[];
   pathwayScene: string;
   industryCategory: string;
+  industryCustom: string;
   industrySubtags: string[];
   subScenarios: string[];
   aiIndustryYears: AIIndustryYears;
-  highlightFields: string[];
 };
 
 const initialState: FormState = {
@@ -42,20 +41,19 @@ const initialState: FormState = {
   courseProjects: [],
   pathwayScene: '',
   industryCategory: '',
+  industryCustom: '',
   industrySubtags: [],
   subScenarios: [],
-  aiIndustryYears: '6m',
-  highlightFields: [],
+  aiIndustryYears: '1y',
 };
 
 const COURSE_PROJECT_MAX = 5;
-const HIGHLIGHT_MAX = 5;
 const AESTHETIC_SUBTAG_MAX = 3;
+const CUSTOM_INDUSTRY_MAX = 10;
 const SUBMIT_LIMIT = 3;
 const SUBMIT_COUNT_KEY = 'resume:submit-count';
 
 function deriveWorkYears(ai: AIIndustryYears): '0' | '<1' | '1-3' | '>3' {
-  if (ai === '6m') return '<1';
   if (ai === '1y') return '1-3';
   return '>3';
 }
@@ -132,7 +130,7 @@ export default function IntakeForm() {
   }, [form.courseProjectGroups]);
 
   const toggleArray = (
-    key: 'courseProjects' | 'courseProjectGroups' | 'highlightFields' | 'industrySubtags',
+    key: 'courseProjects' | 'courseProjectGroups' | 'industrySubtags',
     value: string,
     max?: number
   ) => {
@@ -162,7 +160,10 @@ export default function IntakeForm() {
     setFieldErrors({});
     if (!form.projectDirection) return '请选模型方向';
     if (form.courseProjects.length === 0) return '至少勾选 1 个具体项目';
-    if (!form.industryCategory) return '请选 1 个行业大类';
+    if (!form.industryCategory) return '请选 1 个 AI 方向';
+    if (form.industryCategory === '其他' && !form.industryCustom.trim()) {
+      return '请填写自定义方向';
+    }
     return null;
   }
 
@@ -170,15 +171,19 @@ export default function IntakeForm() {
     if (!form.projectDirection) {
       throw new Error('内部错误：projectDirection 未选');
     }
+    // 选了「其他」就用自定义文本作为最终行业值
+    const finalIndustry =
+      form.industryCategory === '其他' && form.industryCustom.trim()
+        ? form.industryCustom.trim()
+        : form.industryCategory;
     const answers: IntakeAnswers = {
       projectDirection: form.projectDirection,
       courseProjectGroups: form.courseProjectGroups,
       courseProjects: form.courseProjects,
       pathwayScene: form.pathwayScene || undefined,
-      industryCategory: form.industryCategory,
+      industryCategory: finalIndustry,
       industrySubtags: form.industrySubtags,
       aiIndustryYears: form.aiIndustryYears,
-      highlightFields: form.highlightFields,
       workYears: deriveWorkYears(form.aiIndustryYears),
     };
     const basicInfo = {
@@ -397,15 +402,15 @@ export default function IntakeForm() {
         )}
       </section>
 
-      {/* Q3 行业大类 + 二级专业标签 */}
+      {/* Q3 想要做的 AI 方向（单选）+ 二级标签 + 其他自定义 */}
       <section className="space-y-3">
         <h2 className="font-semibold text-base">
           <span className="text-blue-600 mr-2">3.</span>
-          行业（单选 *）
+          想要做的 AI 方向（单选 *）
         </h2>
         {form.projectDirection === '通用美学' && (
           <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-            已选「通用美学」方向，行业自动锁定为「通用美学」（实习生 / 大厂通用线，固化 PE）
+            已选「通用美学」方向，AI 方向自动锁定为「通用美学」
           </p>
         )}
         <div className="space-y-3">
@@ -428,6 +433,7 @@ export default function IntakeForm() {
                         setForm((f) => ({
                           ...f,
                           industryCategory: cat.name,
+                          industryCustom: '',
                           industrySubtags: [],
                           subScenarios: [],
                         }))
@@ -448,6 +454,48 @@ export default function IntakeForm() {
               </div>
             </div>
           ))}
+
+          {/* 「其他」自定义 chip */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+              其他
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={form.projectDirection === '通用美学'}
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    industryCategory: '其他',
+                    industrySubtags: [],
+                    subScenarios: [],
+                  }))
+                }
+                className={`text-sm px-3 py-1.5 rounded-full border transition ${
+                  form.industryCategory === '其他'
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : form.projectDirection === '通用美学'
+                      ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                      : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400'
+                }`}
+              >
+                其他（自定义）
+              </button>
+              {form.industryCategory === '其他' && (
+                <input
+                  type="text"
+                  maxLength={CUSTOM_INDUSTRY_MAX}
+                  value={form.industryCustom}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, industryCustom: e.target.value }))
+                  }
+                  placeholder={`填你的方向（≤${CUSTOM_INDUSTRY_MAX} 字）`}
+                  className="text-sm px-3 py-1.5 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-[200px]"
+                />
+              )}
+            </div>
+          </div>
         </div>
 
         {currentIndustry && currentIndustry.subtags.length > 0 && (() => {
@@ -523,51 +571,6 @@ export default function IntakeForm() {
               </button>
             );
           })}
-        </div>
-      </section>
-
-      {/* Q5 高亮定制 */}
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-semibold text-base">
-            <span className="text-blue-600 mr-2">5.</span>
-            高亮定制（多选 1-{HIGHLIGHT_MAX}）
-          </h2>
-          <span className="text-xs text-slate-500">
-            已选 {form.highlightFields.length}/{HIGHLIGHT_MAX}
-          </span>
-        </div>
-        <div className="space-y-3">
-          {HIGHLIGHT_GROUPS.map((g) => (
-            <div key={g.group} className="space-y-1.5">
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
-                {g.group}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {g.items.map((field) => {
-                  const selected = form.highlightFields.includes(field);
-                  const disabled = !selected && form.highlightFields.length >= HIGHLIGHT_MAX;
-                  return (
-                    <button
-                      key={field}
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => toggleArray('highlightFields', field, HIGHLIGHT_MAX)}
-                      className={`text-sm px-3 py-1.5 rounded-lg border transition text-left ${
-                        selected
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : disabled
-                            ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
-                            : 'bg-white border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {field}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

@@ -29,7 +29,6 @@ export function toBitableFields(payload: {
     industryCategory: string;
     industrySubtags?: string[];
     aiIndustryYears: string;
-    highlightFields: string[];
   };
 }): Record<string, unknown> {
   const { basicInfo: b, intakeAnswers: i } = payload;
@@ -46,7 +45,6 @@ export function toBitableFields(payload: {
     行业大类: i.industryCategory,
     专业方向: i.industrySubtags ?? [],
     'AI 行业年限': i.aiIndustryYears,
-    高亮字段: i.highlightFields,
   };
 }
 

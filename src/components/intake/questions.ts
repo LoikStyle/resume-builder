@@ -14,20 +14,19 @@ export const PROJECT_DIRECTION_OPTIONS: { value: ProjectDirection; label: string
 ];
 
 export const AI_YEARS_OPTIONS: { value: AIIndustryYears; label: string; hint: string }[] = [
-  { value: '6m', label: '半年', hint: '入门 / 偏执行 / 局部参与' },
   { value: '1y', label: '1 年', hint: '初级训练师 / 独立模块负责' },
   { value: '2y', label: '2 年', hint: '中高阶 / 主导规则 + 跨职能协同' },
 ];
 
 /**
  * 课程项目（3 组平级，每个任务独立 chip）：
- *   - 数据标注：文本/语音类标注
+ *   - 文本标注：文本/语音类标注
  *   - 模型评测：文本/语音类评测
  *   - 多模态：图/视频类（标注 + 评测合一，多模态学生通常做端到端）
  */
 export const COURSE_PROJECT_GROUPS: { group: string; items: string[] }[] = [
   {
-    group: '数据标注',
+    group: '文本标注',
     items: [
       'SFT 对话数据标注',
       'CoT 推理过程标注',
@@ -60,43 +59,3 @@ export const COURSE_PROJECT_GROUPS: { group: string; items: string[] }[] = [
 ];
 
 export const COURSE_PROJECT_OPTIONS = COURSE_PROJECT_GROUPS.flatMap((g) => g.items);
-
-/**
- * 高亮定制（12 项 / 4 组）
- */
-export const HIGHLIGHT_GROUPS: { group: string; items: string[] }[] = [
-  {
-    group: '量化指标',
-    items: [
-      '评测维度数',
-      '模型对比数',
-      '数据规模',
-      'Bad Case 类别数',
-    ],
-  },
-  {
-    group: '方法论',
-    items: [
-      '标注规则文档',
-      'Bad Case 归因报告',
-      'Prompt 工程能力',
-    ],
-  },
-  {
-    group: '工具与模型',
-    items: [
-      '具体项目类型（RAG / Agent / 多模态 / VLM）',
-      '工具熟悉度（GPT / Claude / Dify / OpenCompass）',
-    ],
-  },
-  {
-    group: '业务能力',
-    items: [
-      '行业场景理解',
-      '端到端流程',
-      '跨团队协同 / 项目管理',
-    ],
-  },
-];
-
-export const HIGHLIGHT_OPTIONS = HIGHLIGHT_GROUPS.flatMap((g) => g.items);

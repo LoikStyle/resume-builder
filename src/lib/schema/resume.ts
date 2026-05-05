@@ -71,8 +71,8 @@ export type TemplateKind = 'dense' | 'loose' | 'structured';
 
 /** 段 0 追问表单的回答结构 */
 export type WorkYears = '0' | '<1' | '1-3' | '>3';
-/** AI 行业年限：最低半年起 */
-export type AIIndustryYears = '6m' | '1y' | '2y';
+/** AI 行业年限：最低 1 年起 */
+export type AIIndustryYears = '1y' | '2y';
 /** 模型方向（对齐扣子工作流 project_type 字段）
  *  - 通用美学：实习生 / 大厂通用线，固化 PE，不走主线
  */
@@ -93,8 +93,6 @@ export type IntakeAnswers = {
   subScenarios?: string[];
   /** AI 行业年限——决定项目深度 */
   aiIndustryYears: AIIndustryYears;
-  /** 高亮字段——决定后端工作流着重突出哪些字段 */
-  highlightFields: string[];
 
   /** 路演场景补充（可选） */
   pathwayScene?: string;
