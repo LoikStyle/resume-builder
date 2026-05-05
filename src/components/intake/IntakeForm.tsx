@@ -256,12 +256,11 @@ export default function IntakeForm() {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-8 py-8 px-6">
-      {/* honeypot：机器人会填，真人看不见 */}
+      {/* honeypot：POST body 里带非空值视为机器人；浏览器自动填充不会触碰无 name 的字段 */}
       <input
         type="text"
-        name="_company"
         tabIndex={-1}
-        autoComplete="off"
+        autoComplete="new-password"
         value={honeypot}
         onChange={(e) => setHoneypot(e.target.value)}
         style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0 }}
