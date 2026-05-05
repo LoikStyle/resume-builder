@@ -28,26 +28,9 @@ export const ExperienceTypeEnum = z.enum([
   'competition',
 ]);
 
-export const TaskTypeEnum = z.enum([
-  '标注',
-  '评测',
-  '数据生产',
-  '规则设计',
-  '质检',
-  'Prompt工程',
-  '多模型对比',
-]);
-
-export const DataModalityEnum = z.enum([
-  '对话/SFT',
-  'CoT',
-  'RLHF',
-  'RAG',
-  'Agent',
-  '多模态-图',
-  '多模态-视频',
-  '多模态-音',
-]);
+// taskType / dataModality 是元数据 tag（仅前端 chip 显示用），强 enum 易触发校验失败
+export const TaskTypeEnum = z.string();
+export const DataModalityEnum = z.string();
 
 export const ExperienceSchema = z.object({
   id: z.string(),
@@ -87,17 +70,34 @@ export type Education = z.infer<typeof EducationSchema>;
 export type TemplateKind = 'dense' | 'loose' | 'structured';
 
 /** 段 0 追问表单的回答结构 */
+export type WorkYears = '0' | '<1' | '1-3' | '>3';
+/** AI 行业年限：最低 1 年起，custom 走自定义文本 */
+export type AIIndustryYears = '1y' | '2y' | 'custom';
+/** 模型方向（对齐扣子工作流 project_type 字段）
+ *  - 通用美学：实习生 / 大厂通用线，固化 PE，不走主线
+ */
+export type ProjectDirection = '多模态' | '文本模型' | '混合' | '通用美学';
+
 export type IntakeAnswers = {
-  roleDirection: 'annotation' | 'eval' | 'mixed';
-  sceneInterests: string[];
+  /** 模型方向（必填，单选） */
+  projectDirection: ProjectDirection;
+  /** 项目类别（一级 group：数据标注 / 模型评测，多选） */
+  courseProjectGroups: string[];
+  /** 做过的项目（二级标签，从 COURSE_PROJECT_GROUPS 选中的具体任务） */
   courseProjects: string[];
+  /** 行业大类（单选 1 个，来自 INDUSTRIES 列表） */
+  industryCategory: string;
+  /** 行业专业方向（单选，存为 0/1 元素数组以兼容旧 schema） */
+  industrySubtags: string[];
+  /** 细分场景（已下线，保留字段兼容） */
+  subScenarios?: string[];
+  /** AI 行业年限——决定项目深度 */
+  aiIndustryYears: AIIndustryYears;
+  /** AI 年限自定义文本（aiIndustryYears='custom' 时启用） */
+  aiYearsCustom?: string;
+
+  /** 路演场景补充（可选） */
   pathwayScene?: string;
-  modelsTools: {
-    模型: string[];
-    评测框架: string[];
-    自动化工具: string[];
-    标注方法: string[];
-  };
-  roleInProject: string;
-  highlights: string[];
+  /** 从 aiIndustryYears 派生，给老链路读 */
+  workYears?: WorkYears;
 };

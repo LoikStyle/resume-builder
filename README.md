@@ -1,149 +1,129 @@
-# AI 训练师简历生成器（POC）
+# AI 训练师简历信息收集表
 
-面向求职 AI 训练师 / 评测方向的学生：一句话场景 + 6 题追问 → AI 生成结构化简历 JSON → 在线编辑 + 一键 PDF 导出。
+专为 **AI 训练师 / 数据标注员 / 模型评测员** 设计的简历信息收集工具。
 
-## 三段链路
+学生在线填写模型方向、项目经历、行业背景，提交后数据实时写入飞书多维表格，老师或招聘方可直接查阅汇总。
 
-```
-段 1【扣子检索】 学生输入 → 扣子工作流（意图+双路检索）→ 检索结果 JSON
-段 2【Claude 生成】 Next.js 拼 prompt → 本地 claude --print → 严格 schema 简历 JSON
-段 3【编辑导出】  JSON 渲染到 1/3 密度模板 → 左表单右预览 → Puppeteer 一键 PDF
-```
+---
 
-POC 阶段段 1 未配扣子时 `coze-client` 自动用 `data/*.json` 作为 mock 检索结果。
+## 表单结构
 
-## 启动
+| 题目 | 说明 |
+|------|------|
+| 基本信息 | 姓名、手机（必填，用于去重）、邮箱、院校、专业、毕业时间 |
+| 模型方向 | 多模态 / 文本模型 / 混合 / 通用美学（大厂通用实习线） |
+| 做过的项目 | 三组：文本标注（SFT/CoT/RAG/ASR）、模型评测（LLM/横评/音频）、多模态（T2I/T2V/VQA/Caption 等） |
+| 想要做的 AI 方向 | 14 个行业大类 + 二级专业标签多选，支持自定义填写 |
+| AI 年限 | 1年 / 2年 / 自定义（覆盖实习、兼职、3年+ 等各种情况） |
+
+---
+
+## 防刷保护
+
+- IP 频率限制：每 IP 每分钟最多 5 次提交
+- 手机号去重：同一手机号最多提交 3 次（前端计数 + 后端飞书查重双重校验）
+- Honeypot 隐藏字段：过滤机器人自动提交
+- 字段格式校验：姓名/手机/邮箱/毕业时间均有格式要求
+
+---
+
+## 技术栈
+
+- **框架：** Next.js 16 (App Router) + TypeScript
+- **UI：** Tailwind CSS
+- **状态：** Zustand
+- **数据校验：** Zod
+- **数据存储：** 飞书多维表格 OpenAPI（fetch 直连）
+- **部署：** Vercel
+
+---
+
+## 本地运行
 
 ```bash
-npm install      # 装依赖（已经装好）
-npm run dev      # 启 dev server，访问 http://localhost:3000
+git clone https://github.com/LoikStyle/resume-builder.git
+cd resume-builder
+npm install
+cp .env.example .env.local   # 填入飞书凭证
+npm run dev
 ```
 
-**前提**：本地装了 Claude Code CLI 并已登录（`claude --version` 能跑）。
+打开 http://localhost:3000
+
+---
+
+## 环境变量
+
+```bash
+cp .env.example .env.local
+```
+
+| 变量 | 说明 |
+|------|------|
+| `FEISHU_APP_ID` | 飞书自建应用 App ID |
+| `FEISHU_APP_SECRET` | 飞书自建应用 App Secret |
+| `FEISHU_BITABLE_APP_TOKEN` | 多维表格 App Token |
+| `FEISHU_BITABLE_TABLE_ID` | 目标数据表 Table ID |
+| `SESSION_SECRET` | Session 签名密钥（随机字符串，≥16 字节） |
+| `ADMIN_TOKEN` | 管理后台访问 Token |
+| `NEXT_PUBLIC_BASE_PATH` | 子路径部署时填（如 `/resume`），根路径留空 |
+
+飞书自建应用申请：https://open.feishu.cn/app
+
+---
+
+## 飞书表格字段
+
+提交后写入以下列：
+
+| 列名 | 类型 | 说明 |
+|------|------|------|
+| 学生姓名 | 文本 | |
+| 手机 | 文本 | 必填，用于去重 |
+| 邮箱 | 文本 | 可选 |
+| 毕业院校 | 文本 | |
+| 专业 | 文本 | |
+| 毕业时间 | 文本 | |
+| 模型方向 | 文本 | 多模态 / 文本模型 / 混合 / 通用美学 |
+| 项目类别 | 文本 | JSON 数组，如 `["文本标注","多模态"]` |
+| 做过的项目 | 文本 | JSON 数组，具体任务名称 |
+| 想要做的 AI 方向 | 文本 | 行业大类或自定义方向 |
+| 专业方向 | 文本 | JSON 数组，行业二级标签 |
+| AI 行业年限 | 文本 | `1y` / `2y` 或自定义文本 |
+
+---
 
 ## 项目结构
 
 ```
 src/
 ├── app/
-│   ├── page.tsx              首页：场景输入
-│   ├── intake/page.tsx       段 0 追问表单（基本信息 + 6 题）
-│   ├── editor/page.tsx       编辑器
+│   ├── intake/              # 学生填写入口
+│   ├── admin/               # 管理后台（Prompt 调试）
 │   └── api/
-│       ├── generate/         调扣子 + Claude
-│       └── export-pdf/       Puppeteer 导出
-├── components/
-│   ├── intake/               段 0 表单 + 题目配置
-│   ├── editor/               编辑器骨架 + 表单 + 预览
-│   └── templates/            DenseTemplate / LooseTemplate / StructuredTemplate
-├── lib/
-│   ├── schema/resume.ts      Zod ResumeSchema（含训练师专属字段）
-│   ├── claude-client.ts      child_process 调本地 claude CLI
-│   ├── coze-client.ts        扣子工作流 HTTP，未配置时自动 mock
-│   ├── render-html.ts        PDF 用的纯字符串模板（避 React Server 限制）
-│   └── prompts/              Claude 生成 prompt 模板
-└── store/
-    └── resume-store.ts       Zustand + persist → localStorage
-
-scripts/
-├── extract-cards.ts          切 50 份真实简历 → 项目卡片 JSON
-└── extract-jd.ts             切 100 份 JD → 段落 JSON
-
-data/
-├── resume_cards.json         POC 示例：10 张训练师项目卡片
-├── jd_segments.json          POC 示例：6 段 AI 训练师 JD
-├── resumes-raw/              真实简历（你来填，PDF/docx）
-└── jds-raw/                  真实 JD（你来填）
-
-coze/                         扣子工作流导出（你配完后扔这）
+│       ├── export-feishu/   # 表单提交 → 写飞书
+│       └── subscenarios/    # AI 生成细分场景（可选）
+├── components/intake/
+│   ├── IntakeForm.tsx       # 主表单组件
+│   └── questions.ts         # 选项配置（题目数据）
+└── lib/
+    ├── feishu-client.ts     # 飞书 API 封装
+    ├── industries.ts        # 行业 + 二级标签数据
+    ├── validators.ts        # 字段校验规则
+    ├── rate-limit.ts        # IP 频率限制
+    └── schema/resume.ts     # TypeScript 类型定义
 ```
 
-## 真实数据切分
+---
 
-**Day 1 关键步骤**——POC 用 mock 数据跑通了，要上真实质量必须做这步。
+## 部署到 Vercel
 
-```bash
-# 1. 把 50 份真实简历放到 data/resumes-raw/（PDF 或 docx）
-# 2. 切分（每份 60-120 秒，50 份约 1-2 小时）
-npm run extract-cards
-# 3. 输出到 data/resume_cards.json，人工抽查 5-10 张
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LoikStyle/resume-builder)
 
-# 同理 JD：
-# 1. 把 100 份 JD 放到 data/jds-raw/
-npm run extract-jd
-```
+在 Vercel 控制台的 Environment Variables 填入上述变量即可。
 
-切完后导入扣子知识库（参考 plan 文件 `coze/workflow.json` 的 metadata schema）。
+---
 
-## 扣子工作流配置
+## License
 
-未配置 `COZE_PAT` / `COZE_WORKFLOW_ID` 时，`coze-client` 自动读 `data/*.json` 作为 mock 检索结果——POC 直接能跑。
-
-正式接入步骤：
-1. 在 [扣子](https://www.coze.cn) 建空间
-2. 导入两个知识库：`resume_cards`（项目卡片）+ `jd_segments`（JD 段落）
-3. 搭 4 节点工作流：意图分类 LLM → 知识库节点 1 → 知识库节点 2 → End（返回 JSON）
-4. 申请 PAT（[这里](https://www.coze.cn/open/oauth/pats)）
-5. 在 `.env.local` 加：
-
-```
-COZE_PAT=pat_xxxxxxxxxx
-COZE_WORKFLOW_ID=7xxxxxxxxxxxxx
-```
-
-## 环境变量
-
-`.env.local`（POC 阶段不需要）：
-
-```
-# 扣子（可选，未配置时自动 mock 检索）
-COZE_PAT=
-COZE_WORKFLOW_ID=
-COZE_BASE_URL=https://api.coze.cn   # 默认值
-
-# v2 上云后才需要（POC 用本地 claude CLI 不需要）
-# ANTHROPIC_API_KEY=
-```
-
-## 已知限制
-
-- **生成耗时 3-4 分钟**：本地 Claude Code CLI 单次调用慢（含冷启动 + 长 prompt）。v2 切 Anthropic API 直连后压缩到 30-60 秒。
-- **必须本地跑**：Vercel / Cloud Run 没有 `claude` 二进制。上云时改 `src/lib/claude-client.ts` 用 SDK 即可，外部接口签名不变。
-- **三种密度页数差异**：dense 稳定 2 页 ✓；loose / structured 在 4 项目时偏向 3 页（卡片 / 留白占空间）。
-- **简历库 / JD 库目前是 10 张 + 6 段示例**：基于课程笔记内容生成。真实 50 份简历未到位前，质量和示例水平相当。
-
-## v1 → v2 上云切换
-
-只动一个文件 `src/lib/claude-client.ts`：
-
-```ts
-// v1 (POC):
-import { spawn } from 'node:child_process';
-// child_process 调 claude CLI
-
-// v2 (上云):
-import Anthropic from '@anthropic-ai/sdk';
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-// SDK 调 API
-```
-
-调用方代码（`/api/generate/route.ts`）一行不动。
-
-## 关键约束（请保持）
-
-简历内容硬约束（已写进 prompt + schema）：
-
-- ✅ **4-6 个项目**（schema min(4) max(6)）
-- ✅ **两页 A4**（dense 模板能保证；prompt 限制 1200 字内）
-- ✅ **不写项目周期**（experiences[].period 留空，只 education 写时间）
-- ✅ **不写数据量绝对值**（学生不知道，每家公司不一样；用"数千条"/"万级别"/"全量验收"）
-- ✅ **量化用训练师维度**（评测维度数 / 模型对比数 / 场景覆盖数 / Bad Case 类别数 / 拦截率），禁用算法岗指标（FID / 推理速度 / 训练 epoch）
-- ✅ **禁用空话**（"参与了"/"协助"/"负责了"）
-
-## 测试输出
-
-`test-output.pdf` / `test-loose.pdf` / `test-structured.pdf` / `test-with-name.pdf` 是开发期生成的测试 PDF，可直接打开看。
-
-## 完整 plan
-
-`/Users/believe/.claude/plans/md-transient-thimble.md` 是完整方案。
+MIT
