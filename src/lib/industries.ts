@@ -53,12 +53,6 @@ export const INDUSTRIES: IndustryCategory[] = [
     group: '垂直行业',
   },
   {
-    name: '工业/制造',
-    description: '工业视觉检测、设备文本标注、质检数据评测',
-    subtags: [],
-    group: '垂直行业',
-  },
-  {
     name: '游戏/娱乐',
     description: '角色对话标注、剧情文本评测、游戏 AI 评测',
     subtags: [],
