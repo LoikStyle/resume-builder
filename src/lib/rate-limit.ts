@@ -33,14 +33,23 @@ export function clientIp(req: NextRequest | Request): string {
 export function checkOrigin(req: NextRequest | Request): boolean {
   const origin = req.headers.get('origin') || '';
   const referer = req.headers.get('referer') || '';
+  const selfHost =
+    req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '';
+
+  // 自身 host 来的（无论部署到 Vercel / 腾讯云 / localhost 都自动放过）
+  try {
+    if (origin && new URL(origin).host === selfHost) return true;
+    if (referer && new URL(referer).host === selfHost) return true;
+  } catch {}
+
+  // 老线上 + 开发的额外白名单
   const allowed = [
     'https://43.156.46.230:9090',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
   ];
   if (allowed.some((a) => origin.startsWith(a) || referer.startsWith(a))) return true;
-  // 没 origin 没 referer 的（curl/服务端请求）—— 基于 user-agent 判断
-  if (!origin && !referer) return false;
+
   return false;
 }
 
