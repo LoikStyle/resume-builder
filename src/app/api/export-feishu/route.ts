@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pushToBitable, toBitableFields, countRecordsByPhone } from '@/lib/feishu-client';
+import { pushToBitable, toBitableFields } from '@/lib/feishu-client';
 import { checkRate, clientIp, checkOrigin, maybeCleanup } from '@/lib/rate-limit';
 import { validateBasicInfo, enforceLength, type BasicInfo } from '@/lib/validators';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
-
-const SUBMIT_LIMIT_PER_USER = 3;
 
 export async function POST(req: NextRequest) {
   maybeCleanup();
@@ -62,18 +60,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 8. 后端真去重：按手机号查飞书表（防同一人换浏览器/清缓存）
-  if (basicInfo.phone) {
-    const existed = await countRecordsByPhone(basicInfo.phone);
-    if (existed >= SUBMIT_LIMIT_PER_USER) {
-      return NextResponse.json(
-        { error: `该手机号已提交 ${existed} 次，达上限。如需修改请联系老师` },
-        { status: 403 }
-      );
-    }
-  }
-
-  // 9. 写飞书
+  // 8. 写飞书
   const fields = toBitableFields({ basicInfo: basicInfo as Record<string, string>, intakeAnswers });
 
   try {

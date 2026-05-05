@@ -58,7 +58,7 @@ export function validateBasicInfo(b: BasicInfo): { field: FieldKey; error: strin
   const errors: { field: FieldKey; error: string }[] = [];
   for (const key of order) {
     const v = (b[key] ?? '').toString();
-    if (key === 'name' || key === 'school' || key === 'major' || key === 'phone') {
+    if (key === 'name' || key === 'school' || key === 'major') {
       if (!v.trim()) {
         errors.push({ field: key, error: `${LABEL[key]}必填` });
         continue;

@@ -13,11 +13,8 @@ import { validateField, validateBasicInfo, type FieldKey } from '@/lib/validator
 
 type FormState = {
   name: string;
-  phone: string;
-  email: string;
   school: string;
   major: string;
-  graduation: string;
   projectDirection: ProjectDirection | '';
   courseProjectGroups: string[];
   courseProjects: string[];
@@ -32,11 +29,8 @@ type FormState = {
 
 const initialState: FormState = {
   name: '',
-  phone: '',
-  email: '',
   school: '',
   major: '',
-  graduation: '',
   projectDirection: '',
   courseProjectGroups: [],
   courseProjects: [],
@@ -149,9 +143,6 @@ export default function IntakeForm() {
       name: form.name,
       school: form.school,
       major: form.major,
-      phone: form.phone,
-      email: form.email,
-      graduation: form.graduation,
     });
     if (basicErrors.length > 0) {
       const errMap: Partial<Record<FieldKey, string>> = {};
@@ -198,11 +189,8 @@ export default function IntakeForm() {
     };
     const basicInfo = {
       name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim(),
       school: form.school.trim(),
       major: form.major.trim(),
-      graduation: form.graduation.trim(),
     };
     return { answers, basicInfo };
   }
@@ -275,7 +263,7 @@ export default function IntakeForm() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold">告诉我你的项目、方向和偏好</h1>
           <p className="text-sm text-slate-500">
-            填完提交会写入飞书多维表格 · 手机号必填（用于身份去重，每号最多 3 次）
+            填完提交会写入飞书多维表格
           </p>
         </div>
         <div className="text-xs text-slate-500 shrink-0 text-right">
@@ -293,18 +281,9 @@ export default function IntakeForm() {
           <BasicField label="毕业院校 *" value={form.school} fieldKey="school" placeholder="某某大学"
             onChange={(v) => setForm((f) => ({ ...f, school: v }))}
             error={fieldErrors.school} setError={(e) => setFieldErrors((m) => ({ ...m, school: e }))} />
-          <BasicField label="手机号 *" value={form.phone} fieldKey="phone" placeholder="13800138000"
-            onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
-            error={fieldErrors.phone} setError={(e) => setFieldErrors((m) => ({ ...m, phone: e }))} />
-          <BasicField label="邮箱" value={form.email} fieldKey="email" placeholder="zhangsan@example.com"
-            onChange={(v) => setForm((f) => ({ ...f, email: v }))}
-            error={fieldErrors.email} setError={(e) => setFieldErrors((m) => ({ ...m, email: e }))} />
           <BasicField label="专业 *" value={form.major} fieldKey="major" placeholder="计算机科学与技术"
             onChange={(v) => setForm((f) => ({ ...f, major: v }))}
             error={fieldErrors.major} setError={(e) => setFieldErrors((m) => ({ ...m, major: e }))} />
-          <BasicField label="毕业时间" value={form.graduation} fieldKey="graduation" placeholder="2025.06"
-            onChange={(v) => setForm((f) => ({ ...f, graduation: v }))}
-            error={fieldErrors.graduation} setError={(e) => setFieldErrors((m) => ({ ...m, graduation: e }))} />
         </div>
       </section>
 

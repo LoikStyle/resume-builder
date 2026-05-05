@@ -39,11 +39,8 @@ export function toBitableFields(payload: {
       : i.aiIndustryYears;
   return {
     学生姓名: b.name,
-    手机: b.phone,
-    邮箱: b.email,
     毕业院校: b.school,
     专业: b.major,
-    毕业时间: b.graduation,
     模型方向: i.projectDirection ?? '',
     项目类别: i.courseProjectGroups ?? [],
     做过的项目: i.courseProjects,
