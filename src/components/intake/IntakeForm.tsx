@@ -49,7 +49,6 @@ const initialState: FormState = {
 
 const COURSE_PROJECT_MAX = 5;
 const AESTHETIC_SUBTAG_MAX = 3;
-const CUSTOM_INDUSTRY_MAX = 10;
 const SUBMIT_LIMIT = 3;
 const SUBMIT_COUNT_KEY = 'resume:submit-count';
 
@@ -485,12 +484,11 @@ export default function IntakeForm() {
               {form.industryCategory === '其他' && (
                 <input
                   type="text"
-                  maxLength={CUSTOM_INDUSTRY_MAX}
                   value={form.industryCustom}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, industryCustom: e.target.value }))
                   }
-                  placeholder={`填你的方向（≤${CUSTOM_INDUSTRY_MAX} 字）`}
+                  placeholder="填你想做的方向"
                   className="text-sm px-3 py-1.5 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-[200px]"
                 />
               )}
