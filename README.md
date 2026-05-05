@@ -4,8 +4,6 @@
 
 学生在线填写模型方向、项目经历、行业背景，提交后数据实时写入飞书多维表格，老师或招聘方可直接查阅汇总。
 
-**Demo：** https://resume-builder-taupe-eight-45.vercel.app/resume/intake
-
 ---
 
 ## 表单结构
