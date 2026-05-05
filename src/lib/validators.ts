@@ -54,7 +54,7 @@ export function validateField(key: FieldKey, value: string): string | null {
 
 /** 校验整个 basicInfo，返回所有错误（按字段顺序） */
 export function validateBasicInfo(b: BasicInfo): { field: FieldKey; error: string }[] {
-  const order: FieldKey[] = ['name', 'school', 'major', 'phone', 'email', 'graduation'];
+  const order: FieldKey[] = ['name', 'school', 'major'];
   const errors: { field: FieldKey; error: string }[] = [];
   for (const key of order) {
     const v = (b[key] ?? '').toString();
