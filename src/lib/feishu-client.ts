@@ -29,9 +29,14 @@ export function toBitableFields(payload: {
     industryCategory: string;
     industrySubtags?: string[];
     aiIndustryYears: string;
+    aiYearsCustom?: string;
   };
 }): Record<string, unknown> {
   const { basicInfo: b, intakeAnswers: i } = payload;
+  const aiYearsValue =
+    i.aiIndustryYears === 'custom' && i.aiYearsCustom?.trim()
+      ? i.aiYearsCustom.trim()
+      : i.aiIndustryYears;
   return {
     学生姓名: b.name,
     手机: b.phone,
@@ -44,7 +49,7 @@ export function toBitableFields(payload: {
     做过的项目: i.courseProjects,
     '想要做的 AI 方向': i.industryCategory,
     专业方向: i.industrySubtags ?? [],
-    'AI 行业年限': i.aiIndustryYears,
+    'AI 行业年限': aiYearsValue,
   };
 }
 

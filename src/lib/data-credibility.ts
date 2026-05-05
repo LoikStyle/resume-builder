@@ -26,6 +26,7 @@ const CATEGORY_LABEL: Record<ProjectCategory, string> = {
 const YEARS_LABEL: Record<AIIndustryYears, string> = {
   '1y': '1年，独立模块',
   '2y': '2年，主导规则 + 跨职能',
+  custom: '自定义年限',
 };
 
 function detectCategory(projectName: string): ProjectCategory {

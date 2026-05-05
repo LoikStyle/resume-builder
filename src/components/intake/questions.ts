@@ -16,6 +16,7 @@ export const PROJECT_DIRECTION_OPTIONS: { value: ProjectDirection; label: string
 export const AI_YEARS_OPTIONS: { value: AIIndustryYears; label: string; hint: string }[] = [
   { value: '1y', label: '1 年', hint: '初级训练师 / 独立模块负责' },
   { value: '2y', label: '2 年', hint: '中高阶 / 主导规则 + 跨职能协同' },
+  { value: 'custom', label: '自定义', hint: '点这里输具体年限' },
 ];
 
 /**

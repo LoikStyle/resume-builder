@@ -27,6 +27,7 @@ type FormState = {
   industrySubtags: string[];
   subScenarios: string[];
   aiIndustryYears: AIIndustryYears;
+  aiYearsCustom: string;
 };
 
 const initialState: FormState = {
@@ -45,6 +46,7 @@ const initialState: FormState = {
   industrySubtags: [],
   subScenarios: [],
   aiIndustryYears: '1y',
+  aiYearsCustom: '',
 };
 
 const COURSE_PROJECT_MAX = 5;
@@ -54,7 +56,8 @@ const SUBMIT_COUNT_KEY = 'resume:submit-count';
 
 function deriveWorkYears(ai: AIIndustryYears): '0' | '<1' | '1-3' | '>3' {
   if (ai === '1y') return '1-3';
-  return '>3';
+  if (ai === '2y') return '>3';
+  return '1-3'; // custom 走兜底
 }
 
 export default function IntakeForm() {
@@ -163,6 +166,9 @@ export default function IntakeForm() {
     if (form.industryCategory === '其他' && !form.industryCustom.trim()) {
       return '请填写自定义方向';
     }
+    if (form.aiIndustryYears === 'custom' && !form.aiYearsCustom.trim()) {
+      return '请填写自定义 AI 年限';
+    }
     return null;
   }
 
@@ -183,6 +189,7 @@ export default function IntakeForm() {
       industryCategory: finalIndustry,
       industrySubtags: form.industrySubtags,
       aiIndustryYears: form.aiIndustryYears,
+      aiYearsCustom: form.aiYearsCustom.trim() || undefined,
       workYears: deriveWorkYears(form.aiIndustryYears),
     };
     const basicInfo = {
@@ -570,6 +577,17 @@ export default function IntakeForm() {
             );
           })}
         </div>
+        {form.aiIndustryYears === 'custom' && (
+          <input
+            type="text"
+            value={form.aiYearsCustom}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, aiYearsCustom: e.target.value }))
+            }
+            placeholder="填你的 AI 年限（如 3 年 / 实习半年 / 5 年+）"
+            className="w-full text-sm px-3 py-2 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        )}
       </section>
 
       {error && (
