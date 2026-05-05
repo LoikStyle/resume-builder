@@ -45,8 +45,6 @@ const initialState: FormState = {
 
 const COURSE_PROJECT_MAX = 5;
 const AESTHETIC_SUBTAG_MAX = 3;
-const SUBMIT_LIMIT = 3;
-const SUBMIT_COUNT_KEY = 'resume:submit-count';
 
 function deriveWorkYears(ai: AIIndustryYears): '0' | '<1' | '1-3' | '>3' {
   if (ai === '1y') return '1-3';
@@ -65,14 +63,6 @@ export default function IntakeForm() {
   const [feishuResult, setFeishuResult] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [honeypot, setHoneypot] = useState('');
-  const [submitCount, setSubmitCount] = useState(0);
-
-  // 加载本地提交计数
-  useEffect(() => {
-    const cached = parseInt(localStorage.getItem(SUBMIT_COUNT_KEY) || '0', 10);
-    setSubmitCount(Number.isFinite(cached) ? cached : 0);
-  }, []);
-
   const currentIndustry = useMemo(
     () => INDUSTRIES.find((c) => c.name === form.industryCategory),
     [form.industryCategory]
@@ -196,10 +186,6 @@ export default function IntakeForm() {
   }
 
   async function handleSubmit() {
-    if (submitCount >= SUBMIT_LIMIT) {
-      setError(`已达提交上限（${SUBMIT_LIMIT} 次），如需修改请联系老师`);
-      return;
-    }
     const err = validate();
     if (err) return setError(err);
 
@@ -223,10 +209,7 @@ export default function IntakeForm() {
       if (ct.includes('application/json')) {
         const j = (await resp.json()) as { mode?: string; record_id?: string; error?: string };
         if (!resp.ok) throw new Error(j.error ?? '导出失败');
-        const newCount = submitCount + 1;
-        setSubmitCount(newCount);
-        try { localStorage.setItem(SUBMIT_COUNT_KEY, String(newCount)); } catch {}
-        setFeishuResult(`✅ 提交成功（第 ${newCount}/${SUBMIT_LIMIT} 次）`);
+        setFeishuResult('✅ 提交成功');
       } else {
         const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
@@ -265,9 +248,6 @@ export default function IntakeForm() {
           <p className="text-sm text-slate-500">
             填完提交会写入飞书多维表格
           </p>
-        </div>
-        <div className="text-xs text-slate-500 shrink-0 text-right">
-          已提交 {submitCount}/{SUBMIT_LIMIT} 次
         </div>
       </header>
 
@@ -592,14 +572,10 @@ export default function IntakeForm() {
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={submitting || submitCount >= SUBMIT_LIMIT}
+        disabled={submitting}
         className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 disabled:bg-slate-300"
       >
-        {submitting
-          ? `提交中… ${elapsedSec}s`
-          : submitCount >= SUBMIT_LIMIT
-            ? `已达上限（${SUBMIT_LIMIT}/${SUBMIT_LIMIT}）`
-            : `✅ 提交到飞书多维表格（${submitCount}/${SUBMIT_LIMIT}）`}
+        {submitting ? `提交中… ${elapsedSec}s` : '✅ 提交到飞书多维表格'}
       </button>
     </div>
   );
