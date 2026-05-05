@@ -166,6 +166,10 @@ export default function IntakeForm() {
     if (form.industryCategory === '其他' && !form.industryCustom.trim()) {
       return '请填写自定义方向';
     }
+    if (form.industryCategory !== '其他' && form.industrySubtags.length === 0) {
+      const ind = INDUSTRIES.find((c) => c.name === form.industryCategory);
+      if (ind && ind.subtags.length > 0) return '请选专业方向（至少 1 个）';
+    }
     if (form.aiIndustryYears === 'custom' && !form.aiYearsCustom.trim()) {
       return '请填写自定义 AI 年限';
     }
