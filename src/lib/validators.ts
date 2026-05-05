@@ -36,7 +36,7 @@ const RULES: Record<FieldKey, { test: (v: string) => boolean; error: string }> =
   },
   phone: {
     test: (v) => /^1[3-9]\d{9}$/.test(v.trim()),
-    error: '手机号必填且必须是 11 位（1 开头）',
+    error: '手机号格式不对（11 位，1 开头）',
   },
   email: {
     test: (v) => v.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()),

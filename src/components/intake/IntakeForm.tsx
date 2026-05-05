@@ -234,7 +234,7 @@ export default function IntakeForm() {
         const newCount = submitCount + 1;
         setSubmitCount(newCount);
         try { localStorage.setItem(SUBMIT_COUNT_KEY, String(newCount)); } catch {}
-        setFeishuResult(`✅ 提交成功（${newCount}/${SUBMIT_LIMIT}，record_id: ${j.record_id ?? '?'}）`);
+        setFeishuResult(`✅ 提交成功（第 ${newCount}/${SUBMIT_LIMIT} 次）`);
       } else {
         const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
@@ -317,7 +317,13 @@ export default function IntakeForm() {
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, projectDirection: opt.value }))}
+                onClick={() => setForm((f) => ({
+                  ...f,
+                  projectDirection: opt.value,
+                  ...(opt.value !== '通用美学' && f.industryCategory === '通用美学'
+                    ? { industryCategory: '', industrySubtags: [] }
+                    : {}),
+                }))}
                 className={`text-sm px-3 py-2.5 rounded-lg border transition text-left ${
                   selected
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
