@@ -23,6 +23,12 @@ export const INDUSTRIES: IndustryCategory[] = [
 
   // ===== 垂直行业 =====
   {
+    name: '代码/开发工具',
+    description: '代码生成评测、代码审查标注、Bug 修复标注、技术文档生成',
+    subtags: [],
+    group: '垂直行业',
+  },
+  {
     name: '自动驾驶/智能汽车',
     description: '驾驶场景感知、行为数据标注与模型评测',
     subtags: [],
