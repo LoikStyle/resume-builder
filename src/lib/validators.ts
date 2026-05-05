@@ -35,8 +35,8 @@ const RULES: Record<FieldKey, { test: (v: string) => boolean; error: string }> =
     error: '专业 2-30 字',
   },
   phone: {
-    test: (v) => v.trim() === '' || /^1[3-9]\d{9}$/.test(v.trim()),
-    error: '手机号必须是 11 位数字（1 开头）',
+    test: (v) => /^1[3-9]\d{9}$/.test(v.trim()),
+    error: '手机号必填且必须是 11 位（1 开头）',
   },
   email: {
     test: (v) => v.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()),
@@ -58,7 +58,7 @@ export function validateBasicInfo(b: BasicInfo): { field: FieldKey; error: strin
   const errors: { field: FieldKey; error: string }[] = [];
   for (const key of order) {
     const v = (b[key] ?? '').toString();
-    if (key === 'name' || key === 'school' || key === 'major') {
+    if (key === 'name' || key === 'school' || key === 'major' || key === 'phone') {
       if (!v.trim()) {
         errors.push({ field: key, error: `${LABEL[key]}必填` });
         continue;

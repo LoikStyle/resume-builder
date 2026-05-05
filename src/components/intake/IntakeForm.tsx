@@ -54,13 +54,6 @@ const AESTHETIC_SUBTAG_MAX = 3;
 const SUBMIT_LIMIT = 3;
 const SUBMIT_COUNT_KEY = 'resume:submit-count';
 
-type AuthUser = {
-  union_id: string;
-  name: string;
-  email?: string;
-  mobile?: string;
-};
-
 function deriveWorkYears(ai: AIIndustryYears): '0' | '<1' | '1-3' | '>3' {
   if (ai === '6m') return '<1';
   if (ai === '1y') return '1-3';
@@ -79,30 +72,11 @@ export default function IntakeForm() {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [honeypot, setHoneypot] = useState('');
   const [submitCount, setSubmitCount] = useState(0);
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
 
-  // 加载提交计数 + 拉登录态
+  // 加载本地提交计数
   useEffect(() => {
     const cached = parseInt(localStorage.getItem(SUBMIT_COUNT_KEY) || '0', 10);
     setSubmitCount(Number.isFinite(cached) ? cached : 0);
-
-    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/auth/me`)
-      .then((r) => r.json())
-      .then((j: { loggedIn?: boolean; user?: AuthUser }) => {
-        if (j.loggedIn && j.user) {
-          setAuthUser(j.user);
-          // 自动预填基本信息
-          setForm((f) => ({
-            ...f,
-            name: f.name || j.user!.name || '',
-            email: f.email || j.user!.email || '',
-            phone: f.phone || (j.user!.mobile ? j.user!.mobile.replace(/^\+86/, '') : ''),
-          }));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setAuthChecked(true));
   }, []);
 
   const currentIndustry = useMemo(
@@ -219,10 +193,6 @@ export default function IntakeForm() {
   }
 
   async function handleSubmit() {
-    if (!authUser) {
-      setError('请先点右上角「飞书登录」');
-      return;
-    }
     if (submitCount >= SUBMIT_LIMIT) {
       setError(`已达提交上限（${SUBMIT_LIMIT} 次），如需修改请联系老师`);
       return;
@@ -273,36 +243,6 @@ export default function IntakeForm() {
     }
   }
 
-  // 未登录或还在检查登录态时，显示登录门禁
-  if (authChecked && !authUser) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-6">
-        <div className="w-full max-w-md bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
-          <h1 className="text-xl font-semibold">请先登录飞书</h1>
-          <p className="text-sm text-slate-600">
-            为了防止冒名提交，每位学生需用本人飞书账号登录。一次登录有效 24 小时。
-          </p>
-          <a
-            href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/auth/feishu/start`}
-            className="block w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium text-center hover:bg-blue-700"
-          >
-            飞书一键登录
-          </a>
-          <p className="text-xs text-slate-400 text-center">
-            登录会自动预填你的姓名 / 邮箱 / 手机号
-          </p>
-        </div>
-      </div>
-    );
-  }
-  if (!authChecked) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center text-sm text-slate-500">
-        登录态加载中…
-      </div>
-    );
-  }
-
   return (
     <div className="w-full max-w-2xl mx-auto space-y-8 py-8 px-6">
       {/* honeypot：机器人会填，真人看不见 */}
@@ -321,21 +261,11 @@ export default function IntakeForm() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold">告诉我你的项目、方向和偏好</h1>
           <p className="text-sm text-slate-500">
-            填完提交，会写入飞书多维表格 · 已登录：<span className="text-blue-600">{authUser?.name}</span>
+            填完提交会写入飞书多维表格 · 手机号必填（用于身份去重，每号最多 3 次）
           </p>
         </div>
-        <div className="text-xs text-slate-500 shrink-0 text-right space-y-1">
-          <div>已提交 {submitCount}/{SUBMIT_LIMIT} 次</div>
-          <button
-            type="button"
-            onClick={async () => {
-              await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/auth/logout`, { method: 'POST' });
-              location.reload();
-            }}
-            className="text-slate-400 hover:text-slate-600 underline"
-          >
-            退出登录
-          </button>
+        <div className="text-xs text-slate-500 shrink-0 text-right">
+          已提交 {submitCount}/{SUBMIT_LIMIT} 次
         </div>
       </header>
 
@@ -349,7 +279,7 @@ export default function IntakeForm() {
           <BasicField label="毕业院校 *" value={form.school} fieldKey="school" placeholder="某某大学"
             onChange={(v) => setForm((f) => ({ ...f, school: v }))}
             error={fieldErrors.school} setError={(e) => setFieldErrors((m) => ({ ...m, school: e }))} />
-          <BasicField label="手机号" value={form.phone} fieldKey="phone" placeholder="13800138000"
+          <BasicField label="手机号 *" value={form.phone} fieldKey="phone" placeholder="13800138000"
             onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
             error={fieldErrors.phone} setError={(e) => setFieldErrors((m) => ({ ...m, phone: e }))} />
           <BasicField label="邮箱" value={form.email} fieldKey="email" placeholder="zhangsan@example.com"
