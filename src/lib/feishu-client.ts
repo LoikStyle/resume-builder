@@ -42,7 +42,7 @@ export function toBitableFields(payload: {
     模型方向: i.projectDirection ?? '',
     项目类别: i.courseProjectGroups ?? [],
     做过的项目: i.courseProjects,
-    行业大类: i.industryCategory,
+    '想要做的 AI 方向': i.industryCategory,
     专业方向: i.industrySubtags ?? [],
     'AI 行业年限': i.aiIndustryYears,
   };
